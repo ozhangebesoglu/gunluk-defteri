@@ -240,13 +240,25 @@ export class ApiService {
   // Delete all entries (for Settings page)
   async deleteAllEntries(): Promise<void> {
     try {
-      const { error } = await supabase
+      // First get all entry IDs
+      const { data: entries, error: fetchError } = await supabase
         .from('diary_entries')
-        .delete()
-        .neq('id', '') // Delete all records
+        .select('id')
       
-      if (error) throw error
-      console.log('🗑️ Tüm entries silindi')
+      if (fetchError) throw fetchError
+      
+      if (entries && entries.length > 0) {
+        // Delete all entries using a proper condition
+        const { error } = await supabase
+          .from('diary_entries')
+          .delete()
+          .in('id', entries.map(entry => entry.id))
+        
+        if (error) throw error
+        console.log(`🗑️ ${entries.length} adet entry silindi`)
+      } else {
+        console.log('🗑️ Silinecek entry bulunamadı')
+      }
     } catch (error) {
       console.error('❌ Failed to delete all entries:', error)
       throw error

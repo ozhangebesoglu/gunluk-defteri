@@ -191,7 +191,7 @@ const Statistics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className={`w-full min-h-full relative overflow-hidden transition-all duration-700 flex items-center justify-center ${
+      <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 flex items-center justify-center ${
         isDarkTheme 
           ? 'bg-rich-brown-900' 
           : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
@@ -207,7 +207,7 @@ const Statistics: React.FC = () => {
   }
   
   return (
-    <div className={`w-full min-h-full relative overflow-hidden transition-all duration-700 ${
+    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'

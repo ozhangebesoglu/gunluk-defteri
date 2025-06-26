@@ -573,12 +573,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 pt-16 lg:pt-0 overflow-hidden smooth-scroll">
+        <main className="flex-1 pt-16 lg:pt-0 overflow-y-auto smooth-scroll">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={optimizedTransition}
-            className="h-full performance-optimized fps-120"
+            className="min-h-full performance-optimized fps-120"
           >
             {children}
           </motion.div>
