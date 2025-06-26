@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { motion, useScroll, useSpring, useTransform } from 'framer-motion'
+import { motion, useScroll, useSpring } from 'framer-motion'
 import { cn } from '../../lib/utils'
 
 interface ScrollContainerProps {

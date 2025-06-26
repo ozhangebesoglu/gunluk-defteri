@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -15,8 +15,7 @@ import {
   PenTool,
   Sun,
   Moon,
-  Heart,
-  FileText
+  Heart
 } from 'lucide-react'
 import Lamp from '../ui/Lamp'
 import WindowControls from '../ui/WindowControls'
