@@ -335,7 +335,7 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className={`w-full min-h-full relative overflow-hidden transition-all duration-700 ${
+    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
@@ -348,7 +348,7 @@ const Settings: React.FC = () => {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-full px-4 py-6 sm:px-6 lg:px-8">
+      <div className="relative z-10 w-full max-w-full px-4 py-6 sm:px-6 lg:px-8 pb-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div 
