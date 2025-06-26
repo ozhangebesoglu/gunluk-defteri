@@ -59,7 +59,12 @@ export class ApiService {
       this.baseURL = 'http://localhost:3001/api/v1'
     } else {
       // Web mode - check environment
-      if (import.meta.env.PROD) {
+      // Production check using hostname instead of import.meta.env.PROD
+      const isProduction = window.location.hostname !== 'localhost' && 
+                          window.location.hostname !== '127.0.0.1' &&
+                          !window.location.hostname.includes('localhost')
+      
+      if (isProduction) {
         // Production - use Vercel functions
         this.baseURL = '/api'
       } else {
@@ -70,7 +75,12 @@ export class ApiService {
     
     console.log('🔧 API Service initialized:', { 
       mode: this.isElectron ? 'Electron' : 'Web',
-      environment: import.meta.env.PROD ? 'Production' : 'Development',
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+      environment: this.isElectron ? 'Electron' : (
+        window.location.hostname !== 'localhost' && 
+        window.location.hostname !== '127.0.0.1' &&
+        !window.location.hostname.includes('localhost') ? 'Production' : 'Development'
+      ),
       baseURL: this.baseURL 
     })
 
