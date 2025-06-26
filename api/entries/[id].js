@@ -1,6 +1,12 @@
-const { supabase } = require('../../backend/supabase.config')
+const { createClient } = require('@supabase/supabase-js')
 
-export default async function handler(req, res) {
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+)
+
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')

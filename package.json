@@ -48,6 +48,7 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
     "@xenova/transformers": "^2.6.2",
     "argon2": "^0.31.2",
     "crypto-js": "^4.2.0",
