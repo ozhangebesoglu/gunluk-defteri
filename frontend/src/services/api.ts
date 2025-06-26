@@ -51,12 +51,27 @@ export class ApiService {
   private isElectron: boolean
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
-    this.isElectron = !!(window as any).electronAPI
+    this.isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
     
-    console.log('🔧 API Service initialized:', {
+    // Environment-based URL selection
+    if (this.isElectron) {
+      // Electron mode - use backend server
+      this.baseURL = 'http://localhost:3001/api/v1'
+    } else {
+      // Web mode - check environment
+      if (import.meta.env.PROD) {
+        // Production - use Vercel functions
+        this.baseURL = '/api'
+      } else {
+        // Development - use local backend
+        this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
+      }
+    }
+    
+    console.log('🔧 API Service initialized:', { 
       mode: this.isElectron ? 'Electron' : 'Web',
-      baseURL: this.isElectron ? 'IPC' : this.baseURL
+      environment: import.meta.env.PROD ? 'Production' : 'Development',
+      baseURL: this.baseURL 
     })
 
     // Online/offline detection for web mode
@@ -73,18 +88,18 @@ export class ApiService {
   }
 
   // Health check
-  async healthCheck(): Promise<ApiResponse> {
+  async healthCheck(): Promise<{ status: string; message: string }> {
     try {
       if (this.isElectron) {
-        const result = await (window as any).electronAPI.db.healthCheck()
-        return { success: true, data: result }
+        return await (window as any).electronAPI.diary.healthCheck()
       } else {
         const response = await fetch(`${this.baseURL}/health`)
-        const data = await response.json()
-        return { success: response.ok, data }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return await response.json()
       }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error) {
+      console.error('❌ Health check failed:', error)
+      throw new Error('API health check failed')
     }
   }
 
@@ -112,13 +127,10 @@ export class ApiService {
       
       // Fallback to localStorage in web mode
       if (!this.isElectron) {
-        const stored = localStorage.getItem('diary_entries_offline') || '[]'
-        try {
-          const parsed = JSON.parse(stored)
-          return Array.isArray(parsed) ? parsed : []
-        } catch (parseError) {
-          console.error('❌ Failed to parse localStorage entries:', parseError)
-          return []
+        const cached = localStorage.getItem('diary_entries')
+        if (cached) {
+          console.log('📦 Loading from localStorage fallback')
+          return JSON.parse(cached)
         }
       }
       
@@ -145,9 +157,12 @@ export class ApiService {
       
       // Fallback to localStorage
       if (!this.isElectron) {
-        const stored = JSON.parse(localStorage.getItem('diary_entries_offline') || '[]')
-        const entry = stored.find((e: DiaryEntry) => e.id === id)
-        if (entry) return entry
+        const cached = localStorage.getItem('diary_entries')
+        if (cached) {
+          const entries: DiaryEntry[] = JSON.parse(cached)
+          const entry = entries.find(e => e.id === id)
+          if (entry) return entry
+        }
       }
       
       throw error
@@ -168,16 +183,16 @@ export class ApiService {
         })
         
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          const errorText = await response.text()
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
         
-        const data = await response.json()
-        const savedEntry = data.entry || data
+        const newEntry = await response.json()
         
-        // Cache to localStorage for offline access
-        this.cacheEntryLocally(savedEntry, 'create')
+        // Cache in localStorage as backup
+        this.cacheEntryLocally(newEntry, 'create')
         
-        return savedEntry
+        return newEntry
       }
     } catch (error: any) {
       console.error('❌ Failed to create entry:', error)
