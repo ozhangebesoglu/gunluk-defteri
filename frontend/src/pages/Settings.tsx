@@ -335,11 +335,11 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
+    <div className={`w-full h-screen relative overflow-y-auto overscroll-behavior-y-auto transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
-    }`}>
+    }`} style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Paper texture overlay */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
