@@ -1,6 +1,19 @@
 const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Notification } = require('electron')
 const path = require('node:path')
-const log = require('electron-log')
+
+// Logging utility - fallback to console if electron-log fails
+let log
+try {
+  log = require('electron-log')
+} catch (error) {
+  console.warn('electron-log not available, using console fallback')
+  log = {
+    info: console.log,
+    warn: console.warn,
+    error: console.error
+  }
+}
+
 const { autoUpdater } = require('electron-updater')
 const Store = require('electron-store')
 const { initDatabase, closeDatabase, runMigrations, healthCheck } = require('./database')
@@ -927,7 +940,17 @@ app.on('web-contents-created', (event, contents) => {
 // Uygulama çıkışında temizlik
 app.on('before-quit', async () => {
   log.info('🧹 Uygulama kapanıyor, temizlik yapılıyor...')
-  await closeDatabase()
+  try {
+    await closeDatabase()
+  } catch (error) {
+    log.error('❌ Database kapatma hatası:', error)
+  }
+  
+  // Force kill eski process'leri
+  setTimeout(() => {
+    log.warn('⚠️ Force quit - process zorla sonlandırılıyor')
+    process.exit(0)
+  }, 3000)
 })
 
 // Güvenlik ayarları

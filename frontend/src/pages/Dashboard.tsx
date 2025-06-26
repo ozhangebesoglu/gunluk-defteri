@@ -214,7 +214,7 @@ function Dashboard() {
   }
 
   return (
-    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
+    <div className={`w-full min-h-screen relative transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
@@ -232,7 +232,7 @@ function Dashboard() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 sm:mb-8"
+          className="mb-6 sm:mb-8 snap-section"
         >
           <div className={`relative rounded-lg p-4 sm:p-6 lg:p-8 shadow-2xl border-4 transition-all duration-700 ${
             isDarkTheme 
@@ -302,7 +302,7 @@ function Dashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className={`backdrop-blur-sm rounded-lg shadow-lg border p-4 sm:p-6 transition-all duration-700 ${
+              className={`backdrop-blur-sm rounded-lg shadow-lg border p-4 sm:p-6 transition-all duration-700 snap-section ${
                 isDarkTheme 
                   ? 'bg-rich-brown-800 border-rich-brown-600' 
                   : 'bg-white/80 border-amber-200'

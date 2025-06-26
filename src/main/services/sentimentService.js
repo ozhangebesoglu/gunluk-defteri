@@ -1,4 +1,15 @@
-const log = require('electron-log')
+// Logging utility - fallback to console if electron-log fails
+let log
+try {
+  log = require('electron-log')
+} catch (error) {
+  console.warn('electron-log not available, using console fallback')
+  log = {
+    info: console.log,
+    warn: console.warn,
+    error: console.error
+  }
+}
 
 class SentimentService {
   constructor() {

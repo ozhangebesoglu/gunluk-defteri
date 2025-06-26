@@ -143,7 +143,7 @@ const NewEntry: React.FC = () => {
   const selectedSentiment = sentiments.find(sentiment => sentiment.value === entry.sentiment)
 
   return (
-    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
+    <div className={`w-full min-h-screen relative transition-all duration-700 overflow-y-auto context7-scrollbar touch-scroll momentum-scroll ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
@@ -161,7 +161,7 @@ const NewEntry: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6 sm:mb-8"
+          className="text-center mb-6 sm:mb-8 snap-section"
         >
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-4">
             <button

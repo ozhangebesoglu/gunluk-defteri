@@ -7,12 +7,16 @@ export interface DiaryEntry {
   title: string
   content: string
   entry_date: string
+  day_of_week?: string
   tags?: string[]
   sentiment?: string
+  sentiment_score?: number
   weather?: string
   location?: string
   is_favorite?: boolean
+  is_encrypted?: boolean
   word_count?: number
+  read_time?: number
   created_at?: string
   updated_at?: string
   _pendingSync?: boolean // For offline support
@@ -31,11 +35,14 @@ export interface CreateEntryDto {
   title: string
   content: string
   entry_date: Date | string
+  day_of_week?: string
   tags?: string[]
   sentiment?: string
+  sentiment_score?: number
   weather?: string
   location?: string
   is_favorite?: boolean
+  is_encrypted?: boolean
 }
 
 export interface UpdateEntryDto {
@@ -156,20 +163,37 @@ export class ApiService {
     try {
       console.log('✍️ Yeni entry oluşturuluyor...')
       
+      const entryDate = typeof entry.entry_date === 'string' 
+        ? new Date(entry.entry_date) 
+        : entry.entry_date
+      
+      const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+      const dayOfWeek = dayNames[entryDate.getDay()]
+      
       const newEntry = {
-        ...entry,
-        entry_date: typeof entry.entry_date === 'string' 
-          ? entry.entry_date 
-          : entry.entry_date.toISOString().split('T')[0],
+        title: entry.title,
+        content: entry.content,
+        entry_date: entryDate.toISOString().split('T')[0],
+        day_of_week: dayOfWeek,
+        tags: entry.tags || [],
+        sentiment: entry.sentiment || 'neutral',
+        sentiment_score: entry.sentiment_score || 0.5,
+        weather: entry.weather || null,
+        location: entry.location || null,
+        is_favorite: entry.is_favorite || false,
+        is_encrypted: entry.is_encrypted || false,
         word_count: entry.content.split(/\s+/).length,
+        read_time: Math.ceil(entry.content.split(/\s+/).length / 200), // ~200 words per minute
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
 
+      console.log('📝 Gönderilen veri:', newEntry)
+
       const { data, error } = await supabase
         .from('diary_entries')
-        .insert([newEntry])
-        .select()
+        .insert(newEntry)
+        .select('*')
         .single()
       
       if (error) {

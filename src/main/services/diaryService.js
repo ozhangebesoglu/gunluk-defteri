@@ -1,8 +1,47 @@
+// Logging utility - fallback to console if electron-log fails
+let log
+try {
+  log = require('electron-log')
+} catch (error) {
+  console.warn('electron-log not available, using console fallback')
+  log = {
+    info: console.log,
+    warn: console.warn,
+    error: console.error
+  }
+}
+
 const { db, safeQuery } = require('../database')
-const log = require('electron-log')
 const { v4: uuidv4 } = require('uuid')
 const path = require('path')
 const fs = require('fs').promises
+
+// SQLite support için helper functions
+const isUsingPostgreSQL = () => {
+  return db.client.config.client === 'pg'
+}
+
+const formatTagsForDB = (tags) => {
+  if (isUsingPostgreSQL()) {
+    return tags || []
+  } else {
+    // SQLite: JSON string olarak sakla
+    return JSON.stringify(tags || [])
+  }
+}
+
+const parseTagsFromDB = (tags) => {
+  if (isUsingPostgreSQL()) {
+    return tags || []
+  } else {
+    // SQLite: JSON string'i parse et
+    try {
+      return typeof tags === 'string' ? JSON.parse(tags) : []
+    } catch (error) {
+      return []
+    }
+  }
+}
 
 class DiaryService {
   /**
@@ -93,7 +132,7 @@ class DiaryService {
         encrypted_content: entryData.encrypted_content || null,
         entry_date: entryDate,
         day_of_week: dayOfWeek,
-        tags: entryData.tags || [],
+        tags: formatTagsForDB(entryData.tags),
         sentiment: entryData.sentiment || 'neutral',
         sentiment_score: entryData.sentiment_score || 0,
         weather: entryData.weather || null,
@@ -110,7 +149,7 @@ class DiaryService {
       
       // Etiket kullanım sayısını güncelle
       if (entryData.tags && entryData.tags.length > 0) {
-        await this.updateTagUsage(entryData.tags)
+        await this.updateTagUsage(parseTagsFromDB(entryData.tags))
       }
 
       log.info(`✅ Yeni günlük kaydı oluşturuldu: ${insertedEntry.title}`)
@@ -132,7 +171,7 @@ class DiaryService {
         title: entryData.title || existingEntry.title,
         content: entryData.content || existingEntry.content,
         encrypted_content: entryData.encrypted_content || existingEntry.encrypted_content,
-        tags: entryData.tags || existingEntry.tags,
+        tags: formatTagsForDB(entryData.tags),
         sentiment: entryData.sentiment || existingEntry.sentiment,
         sentiment_score: entryData.sentiment_score || existingEntry.sentiment_score,
         weather: entryData.weather !== undefined ? entryData.weather : existingEntry.weather,
@@ -151,7 +190,7 @@ class DiaryService {
 
       // Etiket kullanım sayısını güncelle
       if (entryData.tags) {
-        await this.updateTagUsage(entryData.tags)
+        await this.updateTagUsage(parseTagsFromDB(entryData.tags))
       }
 
       log.info(`✅ Günlük kaydı güncellendi: ${updated.title}`)

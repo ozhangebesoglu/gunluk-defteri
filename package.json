@@ -1,9 +1,9 @@
 {
-  "name": "Günce",
+  "name": "gunce-diary",
   "version": "1.0.0",
   "description": "Modern, güvenli ve şifrelenmiş günce defteri uygulaması",
   "main": "src/main/main.js",
-  "author": "Özhan Gebeşoğlu",
+  "author": "Ozhan Gebesoglu",
   "license": "MIT",
   "private": true,
   "keywords": [
@@ -61,11 +61,13 @@
     "electron-updater": "^6.6.2",
     "knex": "^3.1.0",
     "pg": "^8.11.3",
+    "sqlite3": "^5.1.6",
     "uuid": "^9.0.1"
   },
   "build": {
-    "appId": "com.diary.app",
-    "productName": "Günce",
+    "appId": "com.gunce.diary",
+    "productName": "Gunce Diary",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist-electron",
       "buildResources": "build"
@@ -73,21 +75,34 @@
     "files": [
       "src/main/**/*",
       "frontend/dist/**/*",
-      "node_modules/**/*",
-      "!node_modules/.cache",
-      "!**/*.{ts,map}"
+      "db/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/electron-log/**/*",
+      "node_modules/argon2/**/*",
+      "node_modules/@xenova/transformers/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/",
+        "to": "build/",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": [
@@ -101,7 +116,9 @@
       ],
       "icon": "build/icon.icns",
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "entitlements": null,
+      "entitlementsInherit": null
     },
     "linux": {
       "target": [
@@ -112,7 +129,8 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "category": "Office"
     },
     "nsis": {
       "deleteAppDataOnUninstall": true,
@@ -120,12 +138,14 @@
       "createStartMenuShortcut": true,
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.png",
-      "uninstallerIcon": "build/icon.png",
-      "installerHeader": "build/icon.png",
       "artifactName": "${productName}-${version}-Setup.${ext}",
       "license": "LICENSE",
-      "language": "1055"
-    }
+      "language": "1055",
+      "allowElevation": true,
+      "perMachine": false
+    },
+    "compression": "normal",
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false
   }
 }

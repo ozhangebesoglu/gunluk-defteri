@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -15,10 +15,12 @@ import {
   PenTool,
   Sun,
   Moon,
-  Heart
+  Heart,
+  FileText
 } from 'lucide-react'
 import Lamp from '../ui/Lamp'
 import WindowControls from '../ui/WindowControls'
+import ScrollContainer from '../ui/ScrollContainer'
 
 import { useTheme } from '../../contexts/ThemeContext'
 import { detectDevice, getOptimizedTransition } from '../../lib/motionConfig'
@@ -573,15 +575,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 pt-16 lg:pt-0 overflow-y-auto smooth-scroll">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={optimizedTransition}
-            className="min-h-full performance-optimized fps-120"
+        <main className="flex-1 pt-16 lg:pt-0">
+          <ScrollContainer
+            showScrollIndicator={true}
+            pullToRefresh={true}
+            onRefresh={async () => {
+              // Refresh logic could be added here
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }}
+            scrollbarStyle="context7"
+            overscrollBehavior="contain"
+            className="mobile-optimized fps-120"
           >
-            {children}
-          </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={optimizedTransition}
+              className="min-h-full"
+            >
+              {children}
+            </motion.div>
+          </ScrollContainer>
         </main>
       </div>
 

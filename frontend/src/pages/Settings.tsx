@@ -335,7 +335,7 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className={`w-full h-screen relative overflow-y-auto overscroll-behavior-y-auto transition-all duration-700 ${
+    <div className={`w-full h-screen relative overscroll-behavior-y-auto transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
@@ -348,13 +348,13 @@ const Settings: React.FC = () => {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-full px-4 py-6 sm:px-6 lg:px-8 pb-20">
-        <div className="max-w-4xl mx-auto">
+      <div className="relative z-10 h-full overflow-y-auto context7-scrollbar touch-scroll momentum-scroll">
+        <div className="w-full max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-8">
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8 sm:mb-12"
+            className="text-center mb-8 snap-section"
           >
             <h1 className={`text-3xl sm:text-4xl font-serif font-bold mb-4 transition-colors duration-700 ${
               isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
@@ -405,7 +405,7 @@ const Settings: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className={`backdrop-blur-sm paper-texture rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-700 ${
+              className={`backdrop-blur-sm paper-texture rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-700 snap-section ${
                 isDarkTheme 
                   ? 'bg-rich-brown-800 border border-rich-brown-600' 
                   : 'bg-white/80 border border-amber-200'
@@ -575,7 +575,7 @@ const Settings: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className={`backdrop-blur-sm paper-texture rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-700 ${
+              className={`backdrop-blur-sm paper-texture rounded-xl shadow-lg p-4 sm:p-6 transition-all duration-700 snap-section ${
                 isDarkTheme 
                   ? 'bg-rich-brown-800 border border-rich-brown-600' 
                   : 'bg-white/80 border border-amber-200'

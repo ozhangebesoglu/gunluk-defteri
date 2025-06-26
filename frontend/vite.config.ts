@@ -37,13 +37,13 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/book_icon.png',
+            src: './book_icon.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/book_icon.png',
+            src: './book_icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -63,11 +63,24 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    target: 'es2020',
+    minify: 'terser',
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
       },
-    },
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['framer-motion', 'lucide-react'],
+          utils: ['date-fns', 'clsx'],
+          supabase: ['@supabase/supabase-js']
+        }
+      }
+    }
   },
   server: {
     port: 5173,
