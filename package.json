@@ -23,6 +23,10 @@
     "build:frontend": "cd frontend && npm run build",
     "build:electron": "electron-builder",
     "build:all": "electron-builder -mwl",
+    "build:exe": "npm run build:frontend && electron-builder --win --x64",
+    "build:exe:ia32": "npm run build:frontend && electron-builder --win --ia32",
+    "dist": "npm run build:exe",
+    "dist:all": "npm run build:frontend && electron-builder -mwl",
     "test": "jest",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write src/**/*.{js,jsx,ts,tsx,json,css,md}",
@@ -115,7 +119,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.png",
+      "uninstallerIcon": "build/icon.png",
+      "installerHeader": "build/icon.png",
+      "artifactName": "${productName}-${version}-Setup.${ext}",
+      "license": "LICENSE",
+      "language": "1055"
     }
   }
 }

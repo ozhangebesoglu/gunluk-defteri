@@ -237,28 +237,23 @@ export class ApiService {
     }
   }
 
-  // Delete all entries (for Settings page)
+  // Delete all entries (for Settings page) - FIXED UUID ISSUE
   async deleteAllEntries(): Promise<void> {
     try {
-      // First get all entry IDs
-      const { data: entries, error: fetchError } = await supabase
+      console.log('🗑️ Tüm entries siliniyor...')
+      
+      // Alternative approach: Use NOT operator instead of problematic UUID handling
+      const { error } = await supabase
         .from('diary_entries')
-        .select('id')
+        .delete()
+        .gte('created_at', '1900-01-01') // Match all records created after 1900
       
-      if (fetchError) throw fetchError
-      
-      if (entries && entries.length > 0) {
-        // Delete all entries using a proper condition
-        const { error } = await supabase
-          .from('diary_entries')
-          .delete()
-          .in('id', entries.map(entry => entry.id))
-        
-        if (error) throw error
-        console.log(`🗑️ ${entries.length} adet entry silindi`)
-      } else {
-        console.log('🗑️ Silinecek entry bulunamadı')
+      if (error) {
+        console.error('❌ Delete error:', error)
+        throw error
       }
+      
+      console.log('🗑️ Tüm entries başarıyla silindi')
     } catch (error) {
       console.error('❌ Failed to delete all entries:', error)
       throw error

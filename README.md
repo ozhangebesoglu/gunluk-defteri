@@ -2,6 +2,26 @@
 
 Modern, güvenli ve şifrelenmiş günlük defteri uygulaması. Electron + React + PostgreSQL ile geliştirilmiştir.
 
+## 💿 Download / İndir
+
+### 🖥️ Desktop Uygulaması (EXE)
+**Windows kullanıcıları için hazır kurulum dosyası:**
+
+📥 **[En Son Sürümü İndir](https://github.com/ozhangebesoglu/gunluk-defteri/releases/latest)**
+
+**Kurulum Adımları:**
+1. Yukarıdaki linkten `Günce-1.0.0-Setup.exe` dosyasını indirin
+2. Dosyayı çalıştırın ve kurulum talimatlarını takip edin
+3. Masaüstünüzde veya Başlat menüsünde "Günce" kısayolunu bulun
+4. Uygulamayı açın ve günce yazmaya başlayın!
+
+### 🌐 Web Uygulaması
+**Anında kullanım için:**
+
+🔗 **[Web Versiyonu - gunluk-defteri.vercel.app](https://gunluk-defteri.vercel.app)**
+
+*Not: Web versiyonu sınırlı özelliklere sahiptir. Tam deneyim için desktop uygulamasını indirin.*
+
 ## ✨ Özellikler
 
 ### 🔒 Güvenlik

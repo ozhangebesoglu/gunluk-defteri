@@ -143,7 +143,7 @@ const NewEntry: React.FC = () => {
   const selectedSentiment = sentiments.find(sentiment => sentiment.value === entry.sentiment)
 
   return (
-    <div className={`w-full min-h-full relative transition-all duration-700 ${
+    <div className={`w-full min-h-screen relative overflow-y-auto transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
