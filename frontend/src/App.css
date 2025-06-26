@@ -9,7 +9,7 @@
 .logo {
   height: 6em;
   padding: 1.5em;
-  will-change: filter;
+  /* Removed will-change: filter for better memory management */
   transition: filter 300ms;
 }
 .logo:hover {

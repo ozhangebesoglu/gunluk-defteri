@@ -1,4 +1,5 @@
 // Context7-style 120fps Motion Configuration with Memory Optimization
+import React from 'react'
 export const motionConfig = {
   // High performance spring settings for 120fps
   spring: {
@@ -128,9 +129,29 @@ export const getOptimizedTransition = (deviceInfo = detectDevice()) => {
   }
 }
 
-// Will-change optimization utility
+// Will-change optimization utility - MEMORY SAFE
 export const getWillChangeProps = (animating: boolean) => {
-  return animating ? { style: { willChange: 'transform, opacity' } } : {}
+  // Only apply will-change when actively animating
+  return animating ? { 
+    style: { 
+      willChange: 'transform',  // Only transform, not opacity
+      animationFillMode: 'both'
+    } 
+  } : {
+    style: {
+      willChange: 'auto'  // Reset will-change when not animating
+    }
+  }
+}
+
+// Memory-safe animation state hook
+export const useAnimationState = () => {
+  const [isAnimating, setIsAnimating] = React.useState(false)
+  
+  const startAnimation = () => setIsAnimating(true)
+  const endAnimation = () => setIsAnimating(false)
+  
+  return { isAnimating, startAnimation, endAnimation }
 }
 
 // Reduced motion utility for accessibility

@@ -387,16 +387,15 @@ body {
 /* High Performance 120fps Mobile Optimizations */
 * {
   @apply transition-colors duration-300 ease-in-out;
-  /* 120fps optimizations */
-  will-change: transform, opacity;
+  /* Memory-optimized GPU acceleration - NO will-change by default */
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
-/* Hardware acceleration for mobile */
+/* Hardware acceleration for mobile - Memory optimized */
 @media (max-width: 1024px) {
-  * {
+  .performance-critical {
     transform: translate3d(0, 0, 0);
     -webkit-transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
@@ -585,7 +584,7 @@ body:not(.dark) {
 /* Mobile 120fps Performance Optimizations */
 @media (max-width: 1024px) {
   .performance-optimized {
-    will-change: transform;
+    /* Removed will-change: transform; for better memory management */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     contain: layout style paint;
