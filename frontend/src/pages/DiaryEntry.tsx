@@ -62,12 +62,13 @@ const DiaryEntryPage: React.FC = () => {
       
       // API Service kullanımı (dual mode: Electron + Web + Offline)
       const foundEntry = await apiService.getEntry(entryId)
-      console.log(`✅ Günce yüklendi (${apiService.mode}):`, foundEntry.id)
       
       if (foundEntry) {
+        console.log(`✅ Günce yüklendi (${apiService.mode}):`, foundEntry.id)
         setEntry(foundEntry)
         setEditedEntry({ ...foundEntry })
       } else {
+        console.log(`❌ Günce bulunamadı (${apiService.mode}):`, entryId)
         setError('Günce yazısı bulunamadı')
       }
     } catch (error) {
