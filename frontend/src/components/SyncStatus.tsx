@@ -18,14 +18,14 @@ const SyncStatus: React.FC = () => {
     const interval = setInterval(checkSyncStatus, 30000)
 
     // Listen for online/offline events in web mode
-    if (apiService.mode === 'web') {
+    if (typeof window !== 'undefined') {
       window.addEventListener('online', handleOnline)
       window.addEventListener('offline', handleOffline)
     }
 
     return () => {
       clearInterval(interval)
-      if (apiService.mode === 'web') {
+      if (typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline)
         window.removeEventListener('offline', handleOffline)
       }
@@ -45,37 +45,24 @@ const SyncStatus: React.FC = () => {
     try {
       setStatus('syncing')
       
-      if (apiService.mode === 'electron') {
-        // Electron mode - check database health
+      // Check if we're online (for web mode)
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setStatus('offline')
+        return
+      }
+
+      try {
         const health = await apiService.healthCheck()
-        if (health.success) {
+        // Check if health response indicates success
+        if (health && health.status === 'OK') {
           setStatus('synced')
           setLastSync(new Date())
         } else {
           setStatus('error')
         }
-      } else {
-        // Web mode - check online status and API
-        if (!navigator.onLine) {
-          setStatus('offline')
-          return
-        }
-
-        try {
-          const health = await apiService.healthCheck()
-          if (health.success) {
-            setStatus('synced')
-            setLastSync(new Date())
-            
-            // Sync any offline data if available
-            await apiService.syncOfflineData()
-          } else {
-            setStatus('error')
-          }
-        } catch (error) {
-          // API not available, but we're online - use offline mode
-          setStatus('offline')
-        }
+      } catch (error) {
+        console.warn('API health check failed, running in offline mode:', error)
+        setStatus('offline')
       }
     } catch (error) {
       console.error('❌ Sync status check failed:', error)
@@ -86,15 +73,11 @@ const SyncStatus: React.FC = () => {
   const getStatusIcon = () => {
     switch (status) {
       case 'synced':
-        return apiService.mode === 'electron' 
-          ? <Database className="w-4 h-4 text-green-500" />
-          : <CheckCircle className="w-4 h-4 text-green-500" />
+        return <CheckCircle className="w-4 h-4 text-green-500" />
       case 'syncing':
         return <RotateCw className="w-4 h-4 text-blue-500 animate-spin" />
       case 'offline':
-        return apiService.mode === 'electron'
-          ? <AlertCircle className="w-4 h-4 text-yellow-500" />
-          : <WifiOff className="w-4 h-4 text-red-500" />
+        return <WifiOff className="w-4 h-4 text-yellow-500" />
       case 'error':
         return <AlertCircle className="w-4 h-4 text-red-500" />
       default:
@@ -103,7 +86,8 @@ const SyncStatus: React.FC = () => {
   }
 
   const getStatusText = () => {
-    const mode = apiService.mode === 'electron' ? 'Desktop' : 'Web'
+    const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+    const mode = isElectron ? 'Desktop' : 'Web'
     
     switch (status) {
       case 'synced':
@@ -113,9 +97,7 @@ const SyncStatus: React.FC = () => {
       case 'syncing':
         return `${mode} - Senkronize ediliyor...`
       case 'offline':
-        return apiService.mode === 'electron'
-          ? `${mode} - Veritabanı bağlantısı yok`
-          : `${mode} - Çevrimdışı`
+        return `${mode} - Çevrimdışı / Yerel Kayıt`
       case 'error':
         return `${mode} - Bağlantı hatası`
       default:
@@ -138,6 +120,8 @@ const SyncStatus: React.FC = () => {
     }
   }
 
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+
   return (
     <div className={`flex items-center space-x-2 text-xs transition-colors duration-700 ${getStatusColor()}`}>
       {getStatusIcon()}
@@ -145,11 +129,11 @@ const SyncStatus: React.FC = () => {
       
       {/* Mode indicator badge */}
       <span className={`px-2 py-1 rounded-full text-xs font-medium transition-colors duration-700 ${
-        apiService.mode === 'electron'
+        isElectron
           ? (isDarkTheme ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800')
           : (isDarkTheme ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
       }`}>
-        {apiService.mode === 'electron' ? 'Desktop' : 'Web'}
+        {isElectron ? 'Desktop' : 'Web'}
       </span>
     </div>
   )
