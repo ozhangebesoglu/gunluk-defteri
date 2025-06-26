@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { CheckCircle, RotateCw, WifiOff, AlertCircle, Database } from 'lucide-react'
+import { CheckCircle, RotateCw, WifiOff, AlertCircle } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { apiService } from '../services/api'
 
