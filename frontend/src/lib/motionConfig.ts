@@ -1,4 +1,4 @@
-// Context7-style 120fps Motion Configuration
+// Context7-style 120fps Motion Configuration with Memory Optimization
 export const motionConfig = {
   // High performance spring settings for 120fps
   spring: {
@@ -35,44 +35,41 @@ export const motionConfig = {
   }
 }
 
-// Mobile-optimized animation variants
+// Memory-optimized animation variants
 export const mobileVariants = {
-  // Page transitions
+  // Page transitions - minimize will-change usage
   page: {
-    initial: { opacity: 0, y: 20, scale: 0.98 },
+    initial: { opacity: 0, y: 10 }, // Reduced transform complexity
     animate: { 
       opacity: 1, 
-      y: 0, 
-      scale: 1,
+      y: 0,
       transition: motionConfig.spring
     },
     exit: { 
       opacity: 0, 
-      y: -20, 
-      scale: 0.98,
+      y: -10,
       transition: motionConfig.fastSpring
     }
   },
   
-  // Button interactions
+  // Button interactions - simplified
   button: {
     idle: { scale: 1 },
     hover: { 
-      scale: 1.05,
+      scale: 1.02, // Reduced scale for better performance
       transition: motionConfig.fastSpring
     },
     tap: { 
-      scale: 0.95,
+      scale: 0.98,
       transition: motionConfig.touchSpring
     }
   },
   
-  // Card hover effects
+  // Card hover effects - minimal transform
   card: {
-    idle: { y: 0, scale: 1 },
+    idle: { y: 0 },
     hover: { 
-      y: -4, 
-      scale: 1.02,
+      y: -2, // Reduced movement
       transition: motionConfig.spring
     }
   },
@@ -89,15 +86,14 @@ export const mobileVariants = {
     }
   },
   
-  // List item stagger
+  // List item stagger - reduced complexity
   listItem: {
-    hidden: { opacity: 0, x: -20 },
+    hidden: { opacity: 0 },
     visible: (custom: number) => ({
       opacity: 1,
-      x: 0,
       transition: {
         ...motionConfig.spring,
-        delay: custom * 0.05
+        delay: custom * 0.02 // Reduced stagger delay
       }
     })
   }
@@ -117,13 +113,45 @@ export const detectDevice = () => {
   }
 }
 
-// Performance optimization helper
+// Performance optimization helper with reduced animations for low-end devices
 export const getOptimizedTransition = (deviceInfo = detectDevice()) => {
+  // Reduce animations on mobile for better performance
   if (deviceInfo.isMobile) {
-    return motionConfig.touchSpring
+    return {
+      ...motionConfig.touchSpring,
+      duration: 0.1 // Faster transitions on mobile
+    }
   } else if (deviceInfo.isTablet) {
     return motionConfig.fastSpring
   } else {
     return motionConfig.spring
   }
+}
+
+// Will-change optimization utility
+export const getWillChangeProps = (animating: boolean) => {
+  return animating ? { style: { willChange: 'transform, opacity' } } : {}
+}
+
+// Reduced motion utility for accessibility
+export const shouldReduceMotion = () => {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+// Performance-first animation wrapper
+export const createOptimizedMotion = (baseVariants: any) => {
+  const device = detectDevice()
+  const reduceMotion = shouldReduceMotion()
+  
+  if (reduceMotion || device.isMobile) {
+    // Simplified animations for better performance
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+      transition: { duration: 0.15 }
+    }
+  }
+  
+  return baseVariants
 } 
