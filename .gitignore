@@ -16,6 +16,11 @@ dist-electron/
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env
+frontend/.env.local
+backend/.env
+backend/.env.local
+src/main/.env
 
 # Logs
 npm-debug.log*

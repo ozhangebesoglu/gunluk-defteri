@@ -5,33 +5,44 @@ const compression = require('compression')
 const rateLimit = require('express-rate-limit')
 const { v4: uuidv4 } = require('uuid')
 const { supabase } = require('./supabase.config')
+const envConfig = require('./config/env')
+
+// Simple logger for backend
+const isDev = process.env.NODE_ENV === 'development'
+const logger = {
+  info: (msg, data) => isDev && console.log(`[INFO] ${msg}`, data || ''),
+  error: (msg, err) => console.error(`[ERROR] ${msg}`, err || ''),
+  warn: (msg, data) => console.warn(`[WARN] ${msg}`, data || ''),
+  success: (msg, data) => isDev && console.log(`[SUCCESS] ${msg}`, data || '')
+}
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const config = envConfig.getConfig()
+const PORT = config.server.port
 
 // Security middleware
 app.use(helmet())
 app.use(compression())
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP'
-})
-app.use('/api/', limiter)
+if (config.features.rateLimit) {
+  const limiter = rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    max: config.rateLimit.maxRequests,
+    message: 'Too many requests from this IP'
+  })
+  app.use('/api/', limiter)
+}
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com', 'https://gunce.vercel.app']
-    : ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
+  origin: config.cors.origins,
+  credentials: config.cors.credentials
 }))
 
 app.use(express.json({ limit: '10mb' }))
 
-console.log('🚀 Starting Günce Defteri Backend Server...')
+logger.info('Starting Günce Defteri Backend Server...')
 
 // API Routes
 app.get('/api/v1/health', async (req, res) => {
@@ -67,7 +78,7 @@ app.get('/api/v1/entries', async (req, res) => {
     
     res.json(entries || [])
   } catch (error) {
-    console.error('❌ Entries fetch failed:', error)
+    logger.error('Entries fetch failed:', error)
     res.status(500).json({ error: 'Entries fetch failed', details: error.message })
   }
 })
@@ -89,7 +100,7 @@ app.get('/api/v1/entries/:id', async (req, res) => {
     
     res.json(entry)
   } catch (error) {
-    console.error('❌ Entry fetch failed:', error)
+    logger.error('Entry fetch failed:', error)
     res.status(500).json({ error: 'Entry fetch failed', details: error.message })
   }
 })
@@ -127,10 +138,10 @@ app.post('/api/v1/entries', async (req, res) => {
     
     if (error) throw error
     
-    console.log('✅ New entry created:', savedEntry.id)
+    logger.success('New entry created:', savedEntry.id)
     res.status(201).json(savedEntry)
   } catch (error) {
-    console.error('❌ Entry creation failed:', error)
+    logger.error('Entry creation failed:', error)
     res.status(500).json({ error: 'Entry creation failed', details: error.message })
   }
 })
@@ -162,10 +173,10 @@ app.put('/api/v1/entries/:id', async (req, res) => {
     
     if (error) throw error
     
-    console.log('✅ Entry updated:', updatedEntry.id)
+    logger.success('Entry updated:', updatedEntry.id)
     res.json(updatedEntry)
   } catch (error) {
-    console.error('❌ Entry update failed:', error)
+    logger.error('Entry update failed:', error)
     res.status(500).json({ error: 'Entry update failed', details: error.message })
   }
 })
@@ -180,10 +191,10 @@ app.delete('/api/v1/entries/:id', async (req, res) => {
     
     if (error) throw error
     
-    console.log('✅ Entry deleted:', req.params.id)
+    logger.success('Entry deleted:', req.params.id)
     res.status(204).send()
   } catch (error) {
-    console.error('❌ Entry deletion failed:', error)
+    logger.error('Entry deletion failed:', error)
     res.status(500).json({ error: 'Entry deletion failed', details: error.message })
   }
 })
@@ -198,14 +209,14 @@ app.delete('/api/v1/entries', async (req, res) => {
     
     if (error) throw error
     
-    console.log('✅ All entries deleted')
+    logger.success('All entries deleted')
     res.json({ 
       success: true, 
       message: `All entries deleted`,
       deletedCount: count || 0
     })
   } catch (error) {
-    console.error('❌ Delete all entries failed:', error)
+    logger.error('Delete all entries failed:', error)
     res.status(500).json({ error: 'Delete all entries failed', details: error.message })
   }
 })
@@ -239,10 +250,10 @@ app.post('/api/v1/entries/:id/favorite', async (req, res) => {
     
     if (error) throw error
     
-    console.log('✅ Favorite toggled:', updatedEntry.id)
+    logger.success('Favorite toggled:', updatedEntry.id)
     res.json(updatedEntry)
   } catch (error) {
-    console.error('❌ Favorite toggle failed:', error)
+    logger.error('Favorite toggle failed:', error)
     res.status(500).json({ error: 'Favorite toggle failed', details: error.message })
   }
 })
@@ -254,12 +265,15 @@ app.use('*', (req, res) => {
 
 // Error handler
 app.use((error, req, res, next) => {
-  console.error('Server Error:', error)
+  logger.error('Server Error:', error)
   res.status(500).json({ error: 'Internal server error' })
 })
 
 app.listen(PORT, () => {
-  console.log(`🚀 Günce Backend API running on port ${PORT}`)
-  console.log(`📍 Health check: http://localhost:${PORT}/api/v1/health`)
-  console.log(`🔗 Supabase connection: Ready`)
+  logger.info(`Günce Backend API running on port ${PORT}`)
+  logger.info(`Health check: http://localhost:${PORT}/api/v1/health`)
+  logger.info('Supabase connection: Ready')
+  
+  // Log configuration in development
+  envConfig.logConfig()
 }) 

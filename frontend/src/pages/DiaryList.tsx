@@ -16,6 +16,7 @@ import { tr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiService, type DiaryEntry } from '../services/api';
+import { logger } from '../utils/logger';
 
 interface FilterState {
   searchTerm: string;
@@ -70,9 +71,9 @@ const DiaryList: React.FC = () => {
       });
       setAllTags(Array.from(tags));
       
-      console.log(`📚 Günce listesi yüklendi (${apiService.mode}):`, storedEntries.length, 'adet');
+      logger.success(`Diary list loaded (${apiService.mode}): ${storedEntries.length} entries`);
     } catch (error) {
-              console.error('❌ Günce yükleme hatası:', error);
+      logger.error('Failed to load diary entries:', error);
       setEntries([]);
     } finally {
       setLoading(false);
@@ -117,7 +118,7 @@ const DiaryList: React.FC = () => {
           const dateB = parseEntryDate(b.entry_date);
           comparison = dateA.getTime() - dateB.getTime();
         } catch (error) {
-          console.warn('Tarih sıralama hatası:', error);
+          logger.warn('Date sorting error:', error);
           comparison = 0;
         }
       } else {
@@ -159,7 +160,7 @@ const DiaryList: React.FC = () => {
       const date = parseEntryDate(dateValue);
       return format(date, "dd MMMM yyyy", { locale: tr });
     } catch (error) {
-      console.warn('Tarih formatting hatası:', dateValue, error);
+      logger.warn('Date formatting error:', { dateValue, error });
       return "Tarih bilinmiyor";
     }
   };
@@ -210,7 +211,7 @@ const DiaryList: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-700 overflow-y-auto context7-scrollbar touch-scroll momentum-scroll ${
+    <div className={`min-h-full transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'

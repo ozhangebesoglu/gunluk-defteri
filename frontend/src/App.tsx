@@ -12,8 +12,6 @@ import NewEntry from './pages/NewEntry'
 import Settings from './pages/Settings'
 import Statistics from './pages/Statistics'
 import Memories from './pages/Memories'
-import TestPage from './pages/TestPage'
-import TailwindTest from './pages/TailwindTest'
 
 // Context
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -102,8 +100,6 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/memories" element={<Memories />} />
               <Route path="/anılar" element={<Memories />} />
-              <Route path="/test" element={<TestPage />} />
-              <Route path="/tailwind-test" element={<TailwindTest />} />
             </Routes>
           </Layout>
           

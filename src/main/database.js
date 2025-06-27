@@ -2,6 +2,8 @@ const knex = require('knex')
 const path = require('path')
 const os = require('os')
 const { app } = require('electron')
+const logger = require('./utils/logger')
+const envConfig = require('./config/env')
 
 // Logging utility - fallback to console if electron-log fails
 let log
@@ -78,54 +80,22 @@ const isElectron = typeof process !== 'undefined' && process.versions && process
 const isDev = environment === 'development'
 const isPackaged = app && app.isPackaged
 
-// Debug logs
-log.info('🔍 Environment detection:')
-log.info(`  - NODE_ENV: ${environment}`)
-log.info(`  - isElectron: ${isElectron}`)
-log.info(`  - isDev: ${isDev}`)
-log.info(`  - isPackaged: ${isPackaged}`)
+// Use environment configuration
+const config = envConfig.getConfig()
+logger.info('Environment detection from config:')
+logger.info(`Environment: ${config.env}`)
+logger.info(`isElectron: ${config.isElectron}`)
+logger.info(`isDev: ${config.isDev}`)
+logger.info(`isProd: ${config.isProd}`)
 
-let dbConfig
+// Get database configuration from environment config
+const dbConfig = config.database
 
-// Production Electron (packaged app) için SQLite kullan
-if (isElectron && (isPackaged || environment === 'production')) {
-  // Production Electron: SQLite kullan
-  let dbPath
-  try {
-    const userDataPath = app.getPath('userData')
-    dbPath = path.join(userDataPath, 'gunce-database.sqlite')
-  } catch (error) {
-    // App henüz ready değilse temp path kullan
-    dbPath = path.join(os.tmpdir(), 'gunce-database.sqlite')
-    log.warn('⚠️ App.getPath not ready, using temp path:', dbPath)
-  }
-  
-  // Production'da migration'lar app resources'da
-  const appPath = app ? app.getAppPath() : __dirname
-  const migrationsPath = path.join(appPath, 'db', 'migrations-sqlite')
-  const seedsPath = path.join(appPath, 'db', 'seeds')
-  
-  dbConfig = {
-    client: 'sqlite3',
-    connection: {
-      filename: dbPath
-    },
-    useNullAsDefault: true,
-    migrations: {
-      directory: migrationsPath,
-      tableName: 'knex_migrations'
-    },
-    seeds: {
-      directory: seedsPath
-    }
-  }
-  
-  log.info('📱 Electron SQLite mode:', dbPath)
-  log.info('📁 Migrations path:', migrationsPath)
-} else {
-  // Development veya Web: PostgreSQL kullan
-  dbConfig = databaseConfig[environment]
-  log.info('🐘 PostgreSQL mode:', environment)
+logger.db('Database configuration loaded:', dbConfig.client)
+if (dbConfig.connection?.filename) {
+  logger.db('SQLite path:', dbConfig.connection.filename)
+} else if (dbConfig.connection?.host) {
+  logger.db('PostgreSQL host:', dbConfig.connection.host)
 }
 
 // Veritabanı bağlantısını oluştur
@@ -137,15 +107,15 @@ async function initDatabase() {
     // Veritabanı bağlantısını test et
     await db.raw('SELECT 1+1 as result')
     const dbType = dbConfig.client === 'pg' ? 'PostgreSQL' : 'SQLite'
-    log.info(`✅ ${dbType} bağlantısı başarılı`)
+    logger.success(`${dbType} connection successful`)
     
     // Migration'ları kontrol et
     const [batch, log_] = await db.migrate.currentVersion()
-    log.info(`🔧 Mevcut migration versiyonu: ${batch}`)
+    logger.db(`Current migration version: ${batch}`)
     
     return true
   } catch (error) {
-    log.error('❌ Veritabanı bağlantı hatası:', error.message)
+    logger.error('Database connection error:', error)
     throw error
   }
 }
@@ -154,18 +124,18 @@ async function initDatabase() {
 async function closeDatabase() {
   try {
     await db.destroy()
-    log.info('🔒 Veritabanı bağlantısı kapatıldı')
+    logger.info('Database connection closed')
   } catch (error) {
-    log.error('❌ Veritabanı kapatma hatası:', error.message)
+    logger.error('Database close error:', error)
   }
 }
 
 // Güvenli sorgu yürütme wrapper'ı
-async function safeQuery(queryFn, errorMessage = 'Veritabanı işlemi başarısız') {
+async function safeQuery(queryFn, errorMessage = 'Database operation failed') {
   try {
     return await queryFn()
   } catch (error) {
-    log.error(errorMessage, error.message)
+    logger.error(errorMessage, error)
     throw new Error(errorMessage)
   }
 }
@@ -175,13 +145,13 @@ async function runMigrations() {
   try {
     const [batch, log_] = await db.migrate.latest()
     if (log_.length === 0) {
-      log.info('📦 Tüm migration\'lar güncel')
+      logger.db('All migrations up to date')
     } else {
-      log.info(`📦 ${log_.length} migration başarıyla çalıştırıldı:`, log_)
+      logger.success(`${log_.length} migrations executed successfully:`, log_)
     }
     return true
   } catch (error) {
-    log.error('❌ Migration hatası:', error.message)
+    logger.error('Migration error:', error)
     throw error
   }
 }

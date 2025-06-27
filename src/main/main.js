@@ -20,6 +20,7 @@ const { initDatabase, closeDatabase, runMigrations, healthCheck } = require('./d
 const DiaryService = require('./services/diaryService')
 const EncryptionService = require('./services/encryptionService')
 const SentimentService = require('./services/sentimentService')
+const logger = require('./utils/logger')
 
 // Initialize electron-store
 const store = new Store()
@@ -29,15 +30,16 @@ async function initDefaultPassword() {
   try {
     const hasPassword = await store.has('password.hash')
     if (!hasPassword) {
-      console.log('🔐 Setting default password for testing: 123456')
-      const defaultPassword = '123456'
+      logger.security('Setting random default password for security')
+      const defaultPassword = require('crypto').randomBytes(8).toString('hex')
+      logger.security('Generated password:', { length: defaultPassword.length })
       const hashedPassword = await EncryptionService.hashPassword(defaultPassword)
       await store.set('password.hash', hashedPassword)
       await store.set('settings.passwordProtection', true)
-      console.log('✅ Default password set successfully')
+      logger.success('Default password set successfully')
     }
   } catch (error) {
-    console.error('❌ Error setting default password:', error)
+    logger.error('Error setting default password:', error)
   }
 }
 
@@ -384,17 +386,17 @@ function initPasswordProtection() {
 
 function checkPasswordProtection() {
   return new Promise(async (resolve) => {
-    console.log('🔐 Starting password protection check...')
-    console.log('Password protection enabled:', appSettings.passwordProtection)
-    console.log('App locked:', isAppLocked)
+    logger.security('Starting password protection check')
+    logger.debug('Password protection enabled:', appSettings.passwordProtection)
+    logger.debug('App locked:', isAppLocked)
     
     if (!appSettings.passwordProtection || !isAppLocked) {
-      console.log('✅ No password protection needed - resolving true')
+      logger.success('No password protection needed')
       resolve(true)
       return
     }
 
-    console.log('🔒 Password protection required - creating dialog...')
+    logger.security('Password protection required - creating dialog')
 
     // Create password dialog
     passwordWindow = new BrowserWindow({
@@ -415,7 +417,7 @@ function checkPasswordProtection() {
       }
     })
     
-    console.log('🔍 Password window created with preload:', path.join(__dirname, 'password-preload.js'))
+    logger.debug('Password window created with preload:', path.join(__dirname, 'password-preload.js'))
 
     // Handle window close
     passwordWindow.on('closed', () => {
@@ -451,12 +453,12 @@ function checkPasswordProtection() {
     passwordWindow.loadFile(path.join(__dirname, 'password-dialog.html'))
     
     passwordWindow.once('ready-to-show', () => {
-      console.log('🚪 Password window ready to show')
+      logger.debug('Password window ready to show')
       passwordWindow.show()
       
       // Development mode'da DevTools'u aç
       if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-        console.log('🔧 Opening DevTools for password dialog...')
+        logger.debug('Opening DevTools for password dialog')
         passwordWindow.webContents.openDevTools()
       }
     })
@@ -674,19 +676,19 @@ function setupIpcHandlers() {
   // ===========================================
 
   ipcMain.handle('check-password', async (event, enteredPassword) => {
-    console.log('🔍 check-password handler called with password length:', enteredPassword?.length)
+    logger.security('Password verification attempt', { passwordLength: enteredPassword?.length })
     try {
       const hashedPassword = await store.get('password.hash')
-      console.log('🔑 Stored password hash exists:', !!hashedPassword)
+      logger.debug('Stored password hash exists:', !!hashedPassword)
       
       if (!hashedPassword) {
-        console.log('❌ No password hash found')
+        logger.warn('No password hash found')
         return { success: false, error: 'Şifre ayarlanmamış' }
       }
       
-      console.log('🔍 Verifying password...')
+      logger.security('Verifying password')
       const isValid = await EncryptionService.verifyPassword(enteredPassword, hashedPassword)
-      console.log('✅ Password verification result:', isValid)
+      logger.debug('Password verification result:', isValid)
       
       if (isValid) {
         passwordAttempts = 0
@@ -699,14 +701,13 @@ function setupIpcHandlers() {
         return { success: false, attempts: passwordAttempts, maxAttempts: MAX_PASSWORD_ATTEMPTS }
       }
     } catch (error) {
-      console.error('❌ Şifre kontrol hatası:', error)
-      log.error('❌ Şifre kontrol hatası:', error)
+      logger.error('Password check error:', error)
       return { success: false, error: 'Şifre kontrol hatası' }
     }
   })
 
   ipcMain.handle('close-password', async (event, success) => {
-    console.log('🚪 close-password handler called with success:', success)
+    logger.debug('Close password handler called with success:', success)
     if (passwordWindow) {
       passwordWindow.close()
       passwordWindow = null
@@ -714,7 +715,7 @@ function setupIpcHandlers() {
     
     // Use stored resolve function
     if (checkPasswordProtection.resolveFunction) {
-      console.log('✅ Resolving password protection promise with:', success)
+      logger.success('Resolving password protection promise with:', success)
       checkPasswordProtection.resolveFunction(success)
       checkPasswordProtection.resolveFunction = null
     }
@@ -723,16 +724,16 @@ function setupIpcHandlers() {
   })
 
   ipcMain.handle('cancel-password', async (event) => {
-    console.log('🚫 cancel-password handler called')
+    logger.warn('Password input cancelled')
     if (passwordWindow) {
       passwordWindow.close()
       passwordWindow = null
     }
-    log.info('🚫 Şifre girişi iptal edildi - uygulama kapatılıyor')
+    logger.warn('Password entry cancelled - application closing')
     
     // Use stored resolve function
     if (checkPasswordProtection.resolveFunction) {
-      console.log('❌ Resolving password protection promise with: false')
+      logger.warn('Resolving password protection promise with: false')
       checkPasswordProtection.resolveFunction(false)
       checkPasswordProtection.resolveFunction = null
     }

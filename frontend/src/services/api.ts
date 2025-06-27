@@ -1,5 +1,7 @@
 // Direct Supabase Client API Service - No middleware needed!
 import { createClient } from '@supabase/supabase-js'
+import { logger } from '../utils/logger'
+import { envConfig } from '../config/env'
 
 // API-specific types
 export interface DiaryEntry {
@@ -56,14 +58,13 @@ export interface UpdateEntryDto {
   is_favorite?: boolean
 }
 
-// Supabase configuration
-const supabaseUrl = 'https://nbjnmhtgluctoeyrbgkd.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iam5taHRnbHVjdG9leXJiZ2tkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NDc3MzEsImV4cCI6MjA2NjUyMzczMX0.84GFmIzKFUL6c2I370yyPNVwi9d6IRtXkZAt2ZNAr4Q'
+// Supabase configuration from environment
+const { url: supabaseUrl, anonKey: supabaseKey } = envConfig.supabase
 
 // Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-console.log('🔧 Supabase Client initialized directly!')
+logger.info('Supabase Client initialized directly!')
 
 export class ApiService {
   private _mode: string
@@ -72,7 +73,7 @@ export class ApiService {
   constructor() {
     this._mode = 'Direct Supabase'
     this._environment = 'Production'
-    console.log('🚀 Direct Supabase API Service initialized:', {
+    logger.api('Direct Supabase API Service initialized', {
       mode: this._mode,
       environment: this._environment,
       url: supabaseUrl
@@ -104,7 +105,7 @@ export class ApiService {
         timestamp: new Date().toISOString()
       }
     } catch (error) {
-      console.error('❌ Supabase health check failed:', error)
+      logger.error('Supabase health check failed:', error)
       throw error
     }
   }
@@ -112,7 +113,7 @@ export class ApiService {
   // Get all entries
   async getEntries(): Promise<DiaryEntry[]> {
     try {
-      console.log('📚 Supabase\'den entries çekiliyor...')
+      logger.api('Fetching entries from Supabase')
       
       const { data, error } = await supabase
         .from('diary_entries')
@@ -120,14 +121,14 @@ export class ApiService {
         .order('entry_date', { ascending: false })
       
       if (error) {
-        console.error('❌ Supabase entries error:', error)
+        logger.error('Supabase entries error:', error)
         throw error
       }
 
-      console.log(`✅ ${data?.length || 0} entry başarıyla çekildi`)
+      logger.success(`${data?.length || 0} entries fetched successfully`)
       return data || []
     } catch (error) {
-      console.error('❌ Failed to get entries:', error)
+      logger.error('Failed to get entries:', error)
       throw error
     }
   }
@@ -153,7 +154,7 @@ export class ApiService {
 
       return data
     } catch (error) {
-      console.error(`❌ Failed to get entry ${id}:`, error)
+      logger.error(`Failed to get entry ${id}:`, error)
       throw error
     }
   }
@@ -161,7 +162,7 @@ export class ApiService {
   // Create new entry
   async createEntry(entry: CreateEntryDto): Promise<DiaryEntry> {
     try {
-      console.log('✍️ Yeni entry oluşturuluyor...')
+      logger.api('Creating new entry')
       
       const entryDate = typeof entry.entry_date === 'string' 
         ? new Date(entry.entry_date) 
@@ -188,7 +189,7 @@ export class ApiService {
         updated_at: new Date().toISOString()
       }
 
-      console.log('📝 Gönderilen veri:', newEntry)
+      logger.debug('Entry data being sent:', newEntry)
 
       const { data, error } = await supabase
         .from('diary_entries')
@@ -197,14 +198,14 @@ export class ApiService {
         .single()
       
       if (error) {
-        console.error('❌ Supabase create error:', error)
+        logger.error('Supabase create error:', error)
         throw error
       }
 
-      console.log('✅ Entry başarıyla oluşturuldu:', data.id)
+      logger.success(`Entry created successfully: ${data.id}`)
       return data
     } catch (error) {
-      console.error('❌ Failed to create entry:', error)
+      logger.error('Failed to create entry:', error)
       throw error
     }
   }
@@ -240,7 +241,7 @@ export class ApiService {
       if (error) throw error
       return data
     } catch (error) {
-      console.error(`❌ Failed to update entry ${id}:`, error)
+      logger.error(`Failed to update entry ${id}:`, error)
       throw error
     }
   }
@@ -254,9 +255,9 @@ export class ApiService {
         .eq('id', id)
       
       if (error) throw error
-      console.log(`🗑️ Entry ${id} silindi`)
+      logger.success(`Entry ${id} deleted`)
     } catch (error) {
-      console.error(`❌ Failed to delete entry ${id}:`, error)
+      logger.error(`Failed to delete entry ${id}:`, error)
       throw error
     }
   }
@@ -264,7 +265,7 @@ export class ApiService {
   // Delete all entries (for Settings page) - FIXED UUID ISSUE
   async deleteAllEntries(): Promise<void> {
     try {
-      console.log('🗑️ Tüm entries siliniyor...')
+      logger.api('Deleting all entries')
       
       // Alternative approach: Use NOT operator instead of problematic UUID handling
       const { error } = await supabase
@@ -273,13 +274,13 @@ export class ApiService {
         .gte('created_at', '1900-01-01') // Match all records created after 1900
       
       if (error) {
-        console.error('❌ Delete error:', error)
+        logger.error('Delete error:', error)
         throw error
       }
       
-      console.log('🗑️ Tüm entries başarıyla silindi')
+      logger.success('All entries deleted successfully')
     } catch (error) {
-      console.error('❌ Failed to delete all entries:', error)
+      logger.error('Failed to delete all entries:', error)
       throw error
     }
   }
@@ -309,10 +310,10 @@ export class ApiService {
       
       if (error) throw error
       
-      console.log(`💖 Entry ${id} favorite durumu: ${data.is_favorite}`)
+      logger.success(`Entry ${id} favorite status: ${data.is_favorite}`)
       return data
     } catch (error) {
-      console.error(`❌ Failed to toggle favorite ${id}:`, error)
+      logger.error(`Failed to toggle favorite ${id}:`, error)
       throw error
     }
   }
@@ -328,7 +329,7 @@ export class ApiService {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('❌ Failed to get tags:', error)
+      logger.error('Failed to get tags:', error)
       return [] // Return empty array as fallback
     }
   }
@@ -348,7 +349,7 @@ export class ApiService {
       if (error) throw error
       return data
     } catch (error) {
-      console.error('❌ Failed to create tag:', error)
+      logger.error('Failed to create tag:', error)
       throw error
     }
   }
@@ -365,7 +366,7 @@ export class ApiService {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('❌ Failed to search entries:', error)
+      logger.error('Failed to search entries:', error)
       return []
     }
   }
@@ -382,7 +383,7 @@ export class ApiService {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('❌ Failed to get entries by tag:', error)
+      logger.error('Failed to get entries by tag:', error)
       return []
     }
   }
@@ -400,7 +401,7 @@ export class ApiService {
       if (error) throw error
       return data || []
     } catch (error) {
-      console.error('❌ Failed to get entries by date range:', error)
+      logger.error('Failed to get entries by date range:', error)
       return []
     }
   }

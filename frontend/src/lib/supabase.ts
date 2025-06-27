@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import { envConfig } from '../config/env'
+import { logger } from '../utils/logger'
 
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nbjnmhtgluctoeyrbgkd.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iam5taHRnbHVjdG9leXJiZ2tkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5NDc3MzEsImV4cCI6MjA2NjUyMzczMX0.84GFmIzKFUL6c2I370yyPNVwi9d6IRtXkZAt2ZNAr4Q'
+// Supabase configuration from environment
+const { url: supabaseUrl, anonKey: supabaseAnonKey } = envConfig.supabase
 
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -77,4 +78,4 @@ export interface Database {
   }
 }
 
-console.log('🔗 Frontend Supabase client initialized:', supabaseUrl) 
+logger.success('Frontend Supabase client initialized', { url: supabaseUrl.substring(0, 30) + '...' }) 

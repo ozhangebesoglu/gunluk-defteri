@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { apiService } from '../services/api'
+import { logger } from '../utils/logger'
 
 interface JournalEntry {
   title: string
@@ -99,11 +100,11 @@ const NewEntry: React.FC = () => {
   }
 
   const handleSave = async () => {
-    console.log('🔄 Kaydetme işlemi başlatıldı...')
-          console.log('📝 Günce verisi:', entry)
+    logger.info('Save operation started')
+    logger.debug('Entry data:', entry)
     
     if (!validateForm()) {
-      console.log('❌ Form validasyonu başarısız')
+      logger.warn('Form validation failed')
       return
     }
     
@@ -122,7 +123,7 @@ const NewEntry: React.FC = () => {
       // API Service kullanımı (dual mode: Electron + Web + Offline)
       await apiService.createEntry(entryData)
       
-              console.log('✅ Günce kaydedildi:', entryData)
+      logger.success('Entry saved successfully', { id: entryData.id })
       
       setShowSuccess(true)
       setTimeout(() => {
@@ -130,7 +131,7 @@ const NewEntry: React.FC = () => {
       }, 2000)
       
     } catch (error) {
-      console.error('❌ Günce kaydedilemedi:', error)
+      logger.error('Failed to save entry:', error)
       // Hata mesajı göster
       setShowError(true)
               setErrors({ content: 'Günce kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.' })
@@ -143,7 +144,7 @@ const NewEntry: React.FC = () => {
   const selectedSentiment = sentiments.find(sentiment => sentiment.value === entry.sentiment)
 
   return (
-    <div className={`w-full min-h-screen relative transition-all duration-700 overflow-y-auto context7-scrollbar touch-scroll momentum-scroll ${
+    <div className={`w-full min-h-full relative transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'

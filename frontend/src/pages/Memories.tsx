@@ -132,7 +132,7 @@ const Memories: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-700 ${
+    <div className={`min-h-full transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'

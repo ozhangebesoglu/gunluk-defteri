@@ -19,6 +19,7 @@ import { tr } from 'date-fns/locale'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 import { apiService, type DiaryEntry } from '../services/api'
+import { logger } from '../utils/logger'
 
 interface ValidationErrors {
   title?: string
@@ -64,15 +65,15 @@ const DiaryEntryPage: React.FC = () => {
       const foundEntry = await apiService.getEntry(entryId)
       
       if (foundEntry) {
-        console.log(`✅ Günce yüklendi (${apiService.mode}):`, foundEntry.id)
+        logger.success(`Entry loaded (${apiService.mode}): ${foundEntry.id}`)
         setEntry(foundEntry)
         setEditedEntry({ ...foundEntry })
       } else {
-        console.log(`❌ Günce bulunamadı (${apiService.mode}):`, entryId)
+        logger.warn(`Entry not found (${apiService.mode}): ${entryId}`)
         setError('Günce yazısı bulunamadı')
       }
     } catch (error) {
-      console.error('❌ Günce yüklenemedi:', error)
+      logger.error('Failed to load entry:', error)
       setError('Günce yüklenirken bir hata oluştu')
     } finally {
       setLoading(false)

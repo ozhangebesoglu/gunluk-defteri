@@ -67,6 +67,16 @@ export default defineConfig({
     minify: 'terser',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.info']
+      },
+      mangle: {
+        safari10: true
+      }
+    },
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

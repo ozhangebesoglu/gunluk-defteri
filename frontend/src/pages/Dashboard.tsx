@@ -26,6 +26,7 @@ import { tr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext'
 import { apiService, type DiaryEntry } from '../services/api';
+import { logger } from '../utils/logger';
 
 function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
@@ -67,7 +68,7 @@ function Dashboard() {
     try {
       // API Service kullanımı (dual mode: Electron + Web + Offline)
       const storedEntries = await apiService.getEntries();
-      console.log(`📊 Dashboard verileri yüklendi (${apiService.mode}):`, storedEntries.length, 'adet');
+      logger.success(`Dashboard data loaded (${apiService.mode}): ${storedEntries.length} entries`);
       
       setEntries(storedEntries);
       
@@ -75,7 +76,7 @@ function Dashboard() {
       calculateStats(storedEntries);
       
     } catch (error) {
-      console.error('❌ Veri yükleme hatası:', error);
+      logger.error('Dashboard data loading error:', error);
       setEntries([]);
       calculateStats([]);
     } finally {
@@ -117,7 +118,7 @@ function Dashboard() {
         const entryDate = parseEntryDate(entry.entry_date);
         return isSameMonth(entryDate, today);
       } catch (error) {
-        console.warn('Tarih parsing hatası:', entry.entry_date, error);
+        logger.warn('Date parsing error:', { date: entry.entry_date, error });
         return false;
       }
     });
@@ -178,7 +179,7 @@ function Dashboard() {
         const entryDate = parseEntryDate(entry.entry_date);
         return isSameDay(entryDate, date);
       } catch (error) {
-        console.warn('Tarih parsing hatası:', entry.entry_date, error);
+        logger.warn('Date parsing error:', { date: entry.entry_date, error });
         return false;
       }
     });
@@ -214,7 +215,7 @@ function Dashboard() {
   }
 
   return (
-    <div className={`w-full min-h-screen relative transition-all duration-700 ${
+    <div className={`w-full min-h-full relative transition-all duration-700 ${
       isDarkTheme 
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
