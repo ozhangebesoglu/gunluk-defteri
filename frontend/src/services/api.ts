@@ -1,4 +1,4 @@
-// Direct Supabase Client API Service - No middleware needed!
+// Dual-Mode API Service - Works in both Electron and Web
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '../utils/logger'
 import { envConfig } from '../config/env'
@@ -58,29 +58,30 @@ export interface UpdateEntryDto {
   is_favorite?: boolean
 }
 
-// Supabase configuration from environment
+// Environment detection
+const isElectron = typeof window !== 'undefined' && window.electronAPI
+
+// Supabase configuration (for web mode)
 const { url: supabaseUrl, anonKey: supabaseKey } = envConfig.supabase
-
-// Initialize Supabase client
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-logger.info('Supabase Client initialized directly!')
+const supabase = isElectron ? null : createClient(supabaseUrl, supabaseKey)
 
 export class ApiService {
   private _mode: string
   private _environment: string
 
   constructor() {
-    this._mode = 'Direct Supabase'
-    this._environment = 'Production'
-    logger.api('Direct Supabase API Service initialized', {
+    this._mode = isElectron ? 'Electron + PostgreSQL' : 'Web + Supabase'
+    this._environment = isElectron ? 'Desktop' : 'Web'
+    
+    logger.api('Dual-Mode API Service initialized', {
       mode: this._mode,
       environment: this._environment,
-      url: supabaseUrl
+      isElectron,
+      url: isElectron ? 'localhost:5433' : supabaseUrl
     })
   }
 
-  // Public getters for backward compatibility
+  // Public getters
   get mode(): string {
     return this._mode
   }
@@ -92,20 +93,26 @@ export class ApiService {
   // Health check
   async healthCheck() {
     try {
-      const { error } = await supabase
-        .from('diary_entries')
-        .select('count')
-        .limit(1)
-      
-      if (error) throw error
-      
-      return { 
-        status: 'OK', 
-        message: 'Supabase bağlantısı başarılı',
-        timestamp: new Date().toISOString()
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.database.healthCheck()
+      } else {
+        // Use Supabase
+        const { error } = await supabase!
+          .from('diary_entries')
+          .select('count')
+          .limit(1)
+        
+        if (error) throw error
+        
+        return { 
+          status: 'OK', 
+          message: 'Supabase bağlantısı başarılı',
+          timestamp: new Date().toISOString()
+        }
       }
     } catch (error) {
-      logger.error('Supabase health check failed:', error)
+      logger.error('Health check failed:', error)
       throw error
     }
   }
@@ -113,20 +120,24 @@ export class ApiService {
   // Get all entries
   async getEntries(): Promise<DiaryEntry[]> {
     try {
-      logger.api('Fetching entries from Supabase')
+      logger.api(`Fetching entries (${this.mode})`)
       
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .select('*')
-        .order('entry_date', { ascending: false })
-      
-      if (error) {
-        logger.error('Supabase entries error:', error)
-        throw error
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        const entries = await window.electronAPI.diary.getEntries()
+        logger.success(`${entries?.length || 0} entries fetched (Electron)`)
+        return entries || []
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .select('*')
+          .order('entry_date', { ascending: false })
+        
+        if (error) throw error
+        logger.success(`${data?.length || 0} entries fetched (Supabase)`)
+        return data || []
       }
-
-      logger.success(`${data?.length || 0} entries fetched successfully`)
-      return data || []
     } catch (error) {
       logger.error('Failed to get entries:', error)
       throw error
@@ -141,18 +152,24 @@ export class ApiService {
   // Get entry by ID
   async getEntryById(id: string): Promise<DiaryEntry | null> {
     try {
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (error) {
-        if (error.code === 'PGRST116') return null // Not found
-        throw error
-      }
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.getEntry(id)
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .select('*')
+          .eq('id', id)
+          .single()
+        
+        if (error) {
+          if (error.code === 'PGRST116') return null // Not found
+          throw error
+        }
 
-      return data
+        return data
+      }
     } catch (error) {
       logger.error(`Failed to get entry ${id}:`, error)
       throw error
@@ -162,48 +179,50 @@ export class ApiService {
   // Create new entry
   async createEntry(entry: CreateEntryDto): Promise<DiaryEntry> {
     try {
-      logger.api('Creating new entry')
+      logger.api(`Creating new entry (${this.mode})`)
       
-      const entryDate = typeof entry.entry_date === 'string' 
-        ? new Date(entry.entry_date) 
-        : entry.entry_date
-      
-      const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
-      const dayOfWeek = dayNames[entryDate.getDay()]
-      
-      const newEntry = {
-        title: entry.title,
-        content: entry.content,
-        entry_date: entryDate.toISOString().split('T')[0],
-        day_of_week: dayOfWeek,
-        tags: entry.tags || [],
-        sentiment: entry.sentiment || 'neutral',
-        sentiment_score: entry.sentiment_score || 0.5,
-        weather: entry.weather || null,
-        location: entry.location || null,
-        is_favorite: entry.is_favorite || false,
-        is_encrypted: entry.is_encrypted || false,
-        word_count: entry.content.split(/\s+/).length,
-        read_time: Math.ceil(entry.content.split(/\s+/).length / 200), // ~200 words per minute
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        const newEntry = await window.electronAPI.diary.createEntry(entry)
+        logger.success(`Entry created (Electron): ${newEntry.id}`)
+        return newEntry
+      } else {
+        // Use Supabase
+        const entryDate = typeof entry.entry_date === 'string' 
+          ? new Date(entry.entry_date) 
+          : entry.entry_date
+        
+        const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+        const dayOfWeek = dayNames[entryDate.getDay()]
+        
+        const newEntry = {
+          title: entry.title,
+          content: entry.content,
+          entry_date: entryDate.toISOString().split('T')[0],
+          day_of_week: dayOfWeek,
+          tags: entry.tags || [],
+          sentiment: entry.sentiment || 'neutral',
+          sentiment_score: entry.sentiment_score || 0.5,
+          weather: entry.weather || null,
+          location: entry.location || null,
+          is_favorite: entry.is_favorite || false,
+          is_encrypted: entry.is_encrypted || false,
+          word_count: entry.content.split(/\s+/).length,
+          read_time: Math.ceil(entry.content.split(/\s+/).length / 200),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .insert(newEntry)
+          .select('*')
+          .single()
+        
+        if (error) throw error
+        logger.success(`Entry created (Supabase): ${data.id}`)
+        return data
       }
-
-      logger.debug('Entry data being sent:', newEntry)
-
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .insert(newEntry)
-        .select('*')
-        .single()
-      
-      if (error) {
-        logger.error('Supabase create error:', error)
-        throw error
-      }
-
-      logger.success(`Entry created successfully: ${data.id}`)
-      return data
     } catch (error) {
       logger.error('Failed to create entry:', error)
       throw error
@@ -213,33 +232,39 @@ export class ApiService {
   // Update entry
   async updateEntry(id: string, updates: UpdateEntryDto): Promise<DiaryEntry> {
     try {
-      const updateData: Record<string, string | number | boolean | string[] | undefined> = {
-        ...updates,
-        entry_date: updates.entry_date 
-          ? (typeof updates.entry_date === 'string' 
-              ? updates.entry_date 
-              : updates.entry_date.toISOString().split('T')[0])
-          : undefined,
-        word_count: updates.content 
-          ? updates.content.split(/\s+/).length 
-          : undefined,
-        updated_at: new Date().toISOString()
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.updateEntry(id, updates)
+      } else {
+        // Use Supabase
+        const updateData: Record<string, string | number | boolean | string[] | undefined> = {
+          ...updates,
+          entry_date: updates.entry_date 
+            ? (typeof updates.entry_date === 'string' 
+                ? updates.entry_date 
+                : updates.entry_date.toISOString().split('T')[0])
+            : undefined,
+          word_count: updates.content 
+            ? updates.content.split(/\s+/).length 
+            : undefined,
+          updated_at: new Date().toISOString()
+        }
+
+        // Remove undefined values
+        Object.keys(updateData).forEach(key => 
+          updateData[key] === undefined && delete updateData[key]
+        )
+
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
       }
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => 
-        updateData[key] === undefined && delete updateData[key]
-      )
-
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single()
-      
-      if (error) throw error
-      return data
     } catch (error) {
       logger.error(`Failed to update entry ${id}:`, error)
       throw error
@@ -249,12 +274,18 @@ export class ApiService {
   // Delete entry
   async deleteEntry(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('diary_entries')
-        .delete()
-        .eq('id', id)
-      
-      if (error) throw error
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        await window.electronAPI.diary.deleteEntry(id)
+      } else {
+        // Use Supabase
+        const { error } = await supabase!
+          .from('diary_entries')
+          .delete()
+          .eq('id', id)
+        
+        if (error) throw error
+      }
       logger.success(`Entry ${id} deleted`)
     } catch (error) {
       logger.error(`Failed to delete entry ${id}:`, error)
@@ -262,20 +293,22 @@ export class ApiService {
     }
   }
 
-  // Delete all entries (for Settings page) - FIXED UUID ISSUE
+  // Delete all entries
   async deleteAllEntries(): Promise<void> {
     try {
       logger.api('Deleting all entries')
       
-      // Alternative approach: Use NOT operator instead of problematic UUID handling
-      const { error } = await supabase
-        .from('diary_entries')
-        .delete()
-        .gte('created_at', '1900-01-01') // Match all records created after 1900
-      
-      if (error) {
-        logger.error('Delete error:', error)
-        throw error
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        await window.electronAPI.diary.deleteAllEntries()
+      } else {
+        // Use Supabase
+        const { error } = await supabase!
+          .from('diary_entries')
+          .delete()
+          .gte('created_at', '1900-01-01')
+        
+        if (error) throw error
       }
       
       logger.success('All entries deleted successfully')
@@ -288,30 +321,34 @@ export class ApiService {
   // Toggle favorite
   async toggleFavorite(id: string): Promise<DiaryEntry> {
     try {
-      // First get current entry
-      const { data: currentEntry, error: fetchError } = await supabase
-        .from('diary_entries')
-        .select('is_favorite')
-        .eq('id', id)
-        .single()
-      
-      if (fetchError) throw fetchError
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.toggleFavorite(id)
+      } else {
+        // Use Supabase
+        const { data: currentEntry, error: fetchError } = await supabase!
+          .from('diary_entries')
+          .select('is_favorite')
+          .eq('id', id)
+          .single()
+        
+        if (fetchError) throw fetchError
 
-      // Toggle favorite status
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .update({ 
-          is_favorite: !currentEntry.is_favorite,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single()
-      
-      if (error) throw error
-      
-      logger.success(`Entry ${id} favorite status: ${data.is_favorite}`)
-      return data
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .update({ 
+            is_favorite: !currentEntry.is_favorite,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        
+        logger.success(`Entry ${id} favorite status: ${data.is_favorite}`)
+        return data
+      }
     } catch (error) {
       logger.error(`Failed to toggle favorite ${id}:`, error)
       throw error
@@ -321,33 +358,45 @@ export class ApiService {
   // Get tags
   async getTags(): Promise<DiaryTag[]> {
     try {
-      const { data, error } = await supabase
-        .from('diary_tags')
-        .select('*')
-        .order('name')
-      
-      if (error) throw error
-      return data || []
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.getTags() || []
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_tags')
+          .select('*')
+          .order('name')
+        
+        if (error) throw error
+        return data || []
+      }
     } catch (error) {
       logger.error('Failed to get tags:', error)
-      return [] // Return empty array as fallback
+      return []
     }
   }
 
   // Create tag
   async createTag(tag: Omit<DiaryTag, 'id' | 'created_at'>): Promise<DiaryTag> {
     try {
-      const { data, error } = await supabase
-        .from('diary_tags')
-        .insert([{
-          ...tag,
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single()
-      
-      if (error) throw error
-      return data
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.createTag(tag)
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_tags')
+          .insert([{
+            ...tag,
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single()
+        
+        if (error) throw error
+        return data
+      }
     } catch (error) {
       logger.error('Failed to create tag:', error)
       throw error
@@ -357,14 +406,20 @@ export class ApiService {
   // Search entries
   async searchEntries(query: string): Promise<DiaryEntry[]> {
     try {
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .select('*')
-        .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
-        .order('entry_date', { ascending: false })
-      
-      if (error) throw error
-      return data || []
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.searchEntries(query) || []
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .select('*')
+          .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+          .order('entry_date', { ascending: false })
+        
+        if (error) throw error
+        return data || []
+      }
     } catch (error) {
       logger.error('Failed to search entries:', error)
       return []
@@ -374,14 +429,20 @@ export class ApiService {
   // Get entries by tag
   async getEntriesByTag(tag: string): Promise<DiaryEntry[]> {
     try {
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .select('*')
-        .contains('tags', [tag])
-        .order('entry_date', { ascending: false })
-      
-      if (error) throw error
-      return data || []
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.getEntriesByTag(tag) || []
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .select('*')
+          .contains('tags', [tag])
+          .order('entry_date', { ascending: false })
+        
+        if (error) throw error
+        return data || []
+      }
     } catch (error) {
       logger.error('Failed to get entries by tag:', error)
       return []
@@ -391,15 +452,21 @@ export class ApiService {
   // Get entries by date range
   async getEntriesByDateRange(startDate: string, endDate: string): Promise<DiaryEntry[]> {
     try {
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .select('*')
-        .gte('entry_date', startDate)
-        .lte('entry_date', endDate)
-        .order('entry_date', { ascending: false })
-      
-      if (error) throw error
-      return data || []
+      if (isElectron && window.electronAPI) {
+        // Use Electron API
+        return await window.electronAPI.diary.getEntriesByDateRange(startDate, endDate) || []
+      } else {
+        // Use Supabase
+        const { data, error } = await supabase!
+          .from('diary_entries')
+          .select('*')
+          .gte('entry_date', startDate)
+          .lte('entry_date', endDate)
+          .order('entry_date', { ascending: false })
+        
+        if (error) throw error
+        return data || []
+      }
     } catch (error) {
       logger.error('Failed to get entries by date range:', error)
       return []

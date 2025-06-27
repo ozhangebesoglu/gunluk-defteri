@@ -4,8 +4,8 @@ module.exports = {
     connection: {
       host: '127.0.0.1',
       port: 5433,
-      user: 'postgres',
-      password: 'postgres',
+      user: 'diary_user',
+      password: 'secure_password_123',
       database: 'diary_app',
       ssl: false
     },

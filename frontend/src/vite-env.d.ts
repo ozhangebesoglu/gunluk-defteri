@@ -12,6 +12,15 @@ interface ElectronAPI {
       error?: string;
     }>;
   };
+
+  // Database operations
+  database: {
+    healthCheck: () => Promise<{
+      status: string;
+      message: string;
+      timestamp: string;
+    }>;
+  };
   
   diary: {
     getEntries: (filters?: any) => Promise<any[]>;
@@ -19,7 +28,13 @@ interface ElectronAPI {
     createEntry: (entryData: any) => Promise<any>;
     updateEntry: (id: string, entryData: any) => Promise<any>;
     deleteEntry: (id: string) => Promise<any>;
+    deleteAllEntries: () => Promise<void>;
+    toggleFavorite: (id: string) => Promise<any>;
     getTags: () => Promise<any[]>;
+    createTag: (tag: any) => Promise<any>;
+    searchEntries: (query: string) => Promise<any[]>;
+    getEntriesByTag: (tag: string) => Promise<any[]>;
+    getEntriesByDateRange: (startDate: string, endDate: string) => Promise<any[]>;
     getStatistics: () => Promise<any>;
     search: (query: string, filters?: any) => Promise<any[]>;
   };

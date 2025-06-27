@@ -1,6 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const { app } = require('electron')
+require('dotenv').config()
 
 class EnvironmentConfig {
   constructor() {
@@ -9,7 +10,7 @@ class EnvironmentConfig {
     this.isProd = this.env === 'production'
     this.isElectron = typeof process !== 'undefined' && process.versions && process.versions.electron
     
-    // Load environment variables
+    // Load environment variables with dotenv
     this.loadEnvFiles()
     
     // Validate required variables
@@ -18,7 +19,7 @@ class EnvironmentConfig {
 
   loadEnvFiles() {
     try {
-      // Try to load .env files with fallbacks
+      // dotenv is already loaded at the top, but let's also try additional paths
       const envPaths = [
         path.join(process.cwd(), '.env'),
         path.join(process.cwd(), '.env.local'),
@@ -26,40 +27,21 @@ class EnvironmentConfig {
         path.join(__dirname, '../../../.env')
       ]
 
+      let loaded = false
       for (const envPath of envPaths) {
         if (fs.existsSync(envPath)) {
-          this.parseEnvFile(envPath)
+          require('dotenv').config({ path: envPath })
           console.log(`[ENV] Loaded: ${envPath}`)
+          loaded = true
           break
         }
       }
+      
+      if (!loaded) {
+        console.warn('[ENV] No .env file found in expected paths')
+      }
     } catch (error) {
       console.warn('[ENV] Could not load .env file:', error.message)
-    }
-  }
-
-  parseEnvFile(filePath) {
-    try {
-      const envContent = fs.readFileSync(filePath, 'utf8')
-      const lines = envContent.split('\n')
-      
-      lines.forEach(line => {
-        line = line.trim()
-        if (line && !line.startsWith('#') && line.includes('=')) {
-          const [key, ...valueParts] = line.split('=')
-          const value = valueParts.join('=').trim()
-          
-          // Remove quotes if present
-          const cleanValue = value.replace(/^["']|["']$/g, '')
-          
-          // Only set if not already in process.env
-          if (!process.env[key.trim()]) {
-            process.env[key.trim()] = cleanValue
-          }
-        }
-      })
-    } catch (error) {
-      console.error('[ENV] Error parsing .env file:', error.message)
     }
   }
 
@@ -73,6 +55,7 @@ class EnvironmentConfig {
     
     if (missing.length > 0) {
       console.warn('[ENV] Missing required environment variables:', missing)
+      console.log('[ENV] Available env vars:', Object.keys(process.env).filter(k => k.includes('SUPABASE')))
     }
   }
 
@@ -93,9 +76,9 @@ class EnvironmentConfig {
         client: 'pg',
         connection: {
           host: process.env.DB_HOST || '127.0.0.1',
-          port: parseInt(process.env.DB_PORT) || 5433,
-          user: process.env.DB_USER || 'postgres',
-          password: process.env.DB_PASSWORD || 'postgres',
+          port: parseInt(process.env.DB_PORT) || 5432,
+          user: process.env.DB_USER || 'diary_user',
+          password: process.env.DB_PASSWORD || 'secure_password_123',
           database: process.env.DB_NAME || 'diary_app',
           ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
         }

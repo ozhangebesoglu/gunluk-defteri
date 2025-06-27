@@ -6,7 +6,7 @@ class BackendEnvironmentConfig {
     this.env = process.env.NODE_ENV || 'development'
     this.isDev = this.env === 'development'
     this.isProd = this.env === 'production'
-    this.isTest = this.env === 'test'
+    this._isTest = this.env === 'test'
     
     // Load environment variables
     this.loadEnvFiles()
@@ -193,7 +193,7 @@ class BackendEnvironmentConfig {
   get nodeEnv() { return this.env }
   get isProduction() { return this.isProd }
   get isDevelopment() { return this.isDev }
-  get isTest() { return this.isTest }
+  get isTest() { return this._isTest }
 
   // Export all config as object
   getConfig() {

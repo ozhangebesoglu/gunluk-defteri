@@ -23,6 +23,7 @@ import ScrollContainer from '../ui/ScrollContainer'
 
 import { useTheme } from '../../contexts/ThemeContext'
 import { detectDevice, getOptimizedTransition } from '../../lib/motionConfig'
+import icon from '/book_icon.png'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -158,7 +159,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           <div className="flex items-center space-x-3">
             <motion.img 
-              src="/book_icon.png" 
+              src={icon} 
               alt="Günce Defteri" 
               className="w-8 h-8"
               whileHover={{ scale: 1.1 }}
@@ -293,7 +294,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               }`}>
                 <div className="flex items-center space-x-3">
                   <motion.img 
-                    src="./book_icon.png" 
+                    src={icon} 
                     alt="Günce Defteri" 
                     className="w-7 h-7"
                     whileHover={{ scale: 1.1 }}
@@ -433,7 +434,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <Menu size={20} />
             </motion.button>
-            <img src="/book_icon.png" alt="Günce Defteri" className="w-8 h-8" />
+            <img src={icon} alt="Günce Defteri" className="w-8 h-8" />
             <h1 className={`text-lg font-serif font-semibold transition-colors duration-700 ${
               isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
             }`}>
@@ -485,7 +486,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Desktop Logo */}
           <div className="hidden lg:flex items-center space-x-3">
-            <img src="/book_icon.png" alt="Günce Defteri" className="w-6 h-6" />
+            <img src={icon} alt="Günce Defteri" className="w-6 h-6" />
             <h1 className={`text-lg font-serif font-semibold transition-colors ${
               isDarkTheme ? 'text-rich-brown-100' : 'text-orange-900'
             }`}>

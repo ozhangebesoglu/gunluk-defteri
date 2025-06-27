@@ -27,8 +27,8 @@ const databaseConfig = {
     connection: {
       host: '127.0.0.1',
       port: 5433,
-      user: 'postgres',
-      password: 'postgres',
+      user: 'diary_user',
+      password: 'secure_password_123',
       database: 'diary_app',
       ssl: false
     },
@@ -89,7 +89,32 @@ logger.info(`isDev: ${config.isDev}`)
 logger.info(`isProd: ${config.isProd}`)
 
 // Get database configuration from environment config
-const dbConfig = config.database
+let dbConfig = config.database
+
+// Fix migration paths for Electron
+if (dbConfig.client === 'pg') {
+  dbConfig = {
+    ...dbConfig,
+    migrations: {
+      directory: path.join(__dirname, '../../db/migrations'),
+      tableName: 'knex_migrations'
+    },
+    seeds: {
+      directory: path.join(__dirname, '../../db/seeds')
+    }
+  }
+} else if (dbConfig.client === 'sqlite3') {
+  dbConfig = {
+    ...dbConfig,
+    migrations: {
+      directory: path.join(__dirname, '../../db/migrations-sqlite'),
+      tableName: 'knex_migrations'
+    },
+    seeds: {
+      directory: path.join(__dirname, '../../db/seeds')
+    }
+  }
+}
 
 logger.db('Database configuration loaded:', dbConfig.client)
 if (dbConfig.connection?.filename) {
