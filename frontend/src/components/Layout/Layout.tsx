@@ -23,7 +23,7 @@ import ScrollContainer from '../ui/ScrollContainer'
 
 import { useTheme } from '../../contexts/ThemeContext'
 import { detectDevice, getOptimizedTransition } from '../../lib/motionConfig'
-import icon from '/book_icon.png'
+const icon = '/book_icon.png'
 
 interface LayoutProps {
   children: React.ReactNode
