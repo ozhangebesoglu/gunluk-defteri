@@ -76,7 +76,7 @@ let passwordWindow = null
 
 // Ana pencereyi oluştur
 function createMainWindow() {
-  log.info('🚀 Ana pencere oluşturuluyor...')
+  logger.info('🚀 Ana pencere oluşturuluyor...')
   
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -136,7 +136,7 @@ function createMainWindow() {
   } else {
     // Production build path
     const frontendPath = path.join(__dirname, '../../frontend/dist/index.html')
-    log.info('📂 Frontend path:', frontendPath)
+    logger.info('📂 Frontend path:', frontendPath)
     mainWindow.loadFile(frontendPath)
   }
 
@@ -154,7 +154,7 @@ function createMainWindow() {
     
     // Diğer tüm navigasyonları engelle
     event.preventDefault()
-    log.warn('🚫 Güvenlik: Engellenen navigasyon:', navigationUrl)
+    logger.warn('🚫 Güvenlik: Engellenen navigasyon:', navigationUrl)
   })
 
   // Güvenli pencere açma kontrolü
@@ -163,31 +163,31 @@ function createMainWindow() {
     if (url.startsWith('https://')) {
       shell.openExternal(url)
     } else {
-      log.warn('🚫 Güvenlik: Engellenen pencere açma:', url)
+      logger.warn('🚫 Güvenlik: Engellenen pencere açma:', url)
     }
     return { action: 'deny' }
   })
 
   // Pencere hazır olduğunda göster
   mainWindow.once('ready-to-show', async () => {
-    log.info('✨ Ana pencere hazır - şifre kontrolü yapılıyor...')
+    logger.info('✨ Ana pencere hazır - şifre kontrolü yapılıyor...')
     
     try {
       const passwordOk = await checkPasswordProtection()
       
       if (passwordOk) {
-        log.info('🔓 Şifre kontrolü başarılı - ana pencere gösteriliyor')
+        logger.info('🔓 Şifre kontrolü başarılı - ana pencere gösteriliyor')
         mainWindow.show()
         
         if (isDev) {
           mainWindow.focus()
         }
       } else {
-        log.error('❌ Şifre kontrolü başarısız - uygulama kapatılıyor')
+        logger.error('❌ Şifre kontrolü başarısız - uygulama kapatılıyor')
         app.quit()
       }
     } catch (error) {
-      log.error('❌ Şifre kontrolü sırasında hata:', error)
+      logger.error('❌ Şifre kontrolü sırasında hata:', error)
       app.quit()
     }
   })
@@ -231,11 +231,11 @@ function createApplicationMenu() {
 
 // 🔔 Notification System
 function initNotificationSystem() {
-  log.info('🔔 Notification sistemi başlatılıyor...')
+  logger.info('🔔 Notification sistemi başlatılıyor...')
   
   // Check if notifications are supported
   if (!Notification.isSupported()) {
-    log.warn('⚠️ Bu sistemde bildirimler desteklenmiyor')
+    logger.warn('⚠️ Bu sistemde bildirimler desteklenmiyor')
     return
   }
 
@@ -256,10 +256,10 @@ function loadAppSettings() {
     if (fs.existsSync(settingsPath)) {
       const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
       appSettings = { ...appSettings, ...savedSettings }
-      log.info('📱 Ayarlar yüklendi:', appSettings)
+      logger.info('📱 Ayarlar yüklendi:', appSettings)
     }
   } catch (error) {
-    log.error('❌ Ayarlar yüklenemedi:', error)
+    logger.error('❌ Ayarlar yüklenemedi:', error)
   }
 }
 
@@ -268,9 +268,9 @@ function saveAppSettings() {
     const fs = require('fs')
     const settingsPath = path.join(app.getPath('userData'), 'app-settings.json')
     fs.writeFileSync(settingsPath, JSON.stringify(appSettings, null, 2))
-    log.info('💾 Ayarlar kaydedildi')
+    logger.info('💾 Ayarlar kaydedildi')
   } catch (error) {
-    log.error('❌ Ayarlar kaydedilemedi:', error)
+    logger.error('❌ Ayarlar kaydedilemedi:', error)
   }
 }
 
@@ -302,7 +302,7 @@ function scheduleDailyReminder() {
 
   const timeUntilReminder = reminderTime.getTime() - now.getTime()
   
-  log.info(`⏰ Günce hatırlatması planlandı: ${reminderTime.toLocaleString('tr-TR')} (${Math.round(timeUntilReminder / 1000 / 60)} dakika sonra)`)
+  logger.info(`⏰ Günce hatırlatması planlandı: ${reminderTime.toLocaleString('tr-TR')} (${Math.round(timeUntilReminder / 1000 / 60)} dakika sonra)`)
 
   notificationTimer = setTimeout(() => {
     showDailyReminder()
@@ -337,7 +337,7 @@ function showDailyReminder() {
   })
 
   notification.show()
-  log.info('🔔 Günce hatırlatması gönderildi')
+  logger.info('🔔 Günce hatırlatması gönderildi')
 }
 
 function showCustomNotification(title, body, options = {}) {
@@ -364,11 +364,11 @@ function showCustomNotification(title, body, options = {}) {
 
 // 🔐 Password Protection System
 function initPasswordProtection() {
-  log.info('🔐 Şifre koruması sistemi başlatılıyor...')
+  logger.info('🔐 Şifre koruması sistemi başlatılıyor...')
   
   if (appSettings.passwordProtection) {
     isAppLocked = true
-    log.info('🔒 Uygulama kilitli - şifre gerekli')
+    logger.info('🔒 Uygulama kilitli - şifre gerekli')
   }
 }
 
@@ -420,7 +420,7 @@ function checkPasswordProtection() {
       }
       isAppLocked = false
       passwordAttempts = 0
-      log.info('✅ Şifre koruması başarılı - ana pencere açılıyor')
+      logger.info('✅ Şifre koruması başarılı - ana pencere açılıyor')
       resolve(true)
     }
 
@@ -430,7 +430,7 @@ function checkPasswordProtection() {
         passwordWindow.close()
         passwordWindow = null
       }
-      log.error('❌ Şifre koruması başarısız - uygulama kapatılıyor')
+      logger.error('❌ Şifre koruması başarısız - uygulama kapatılıyor')
       resolve(false)
     }
 
@@ -487,7 +487,7 @@ ipcMain.handle('diary:getEntries', async (event, filters = {}) => {
   try {
     return await diaryService.getEntries(filters)
   } catch (error) {
-    log.error('Failed to get entries:', error)
+    logger.error('Failed to get entries:', error)
     throw error
   }
 })
@@ -496,7 +496,7 @@ ipcMain.handle('diary:getEntry', async (event, id) => {
   try {
     return await diaryService.getEntry(id)
   } catch (error) {
-    log.error('Failed to get entry:', error)
+    logger.error('Failed to get entry:', error)
     throw error
   }
 })
@@ -505,7 +505,7 @@ ipcMain.handle('diary:createEntry', async (event, entry) => {
   try {
     return await diaryService.createEntry(entry)
   } catch (error) {
-    log.error('Failed to create entry:', error)
+    logger.error('Failed to create entry:', error)
     throw error
   }
 })
@@ -514,7 +514,7 @@ ipcMain.handle('diary:updateEntry', async (event, id, entry) => {
   try {
     return await diaryService.updateEntry(id, entry)
   } catch (error) {
-    log.error('Failed to update entry:', error)
+    logger.error('Failed to update entry:', error)
     throw error
   }
 })
@@ -523,7 +523,7 @@ ipcMain.handle('diary:deleteEntry', async (event, id) => {
   try {
     return await diaryService.deleteEntry(id)
   } catch (error) {
-    log.error('Failed to delete entry:', error)
+    logger.error('Failed to delete entry:', error)
     throw error
   }
 })
@@ -532,7 +532,7 @@ ipcMain.handle('diary:deleteAllEntries', async (event) => {
   try {
     return await diaryService.deleteAllEntries()
   } catch (error) {
-    log.error('Failed to delete all entries:', error)
+    logger.error('Failed to delete all entries:', error)
     throw error
   }
 })
@@ -543,16 +543,16 @@ ipcMain.handle('diary:getTags', async (event) => {
 
 // IPC Event Handlers
 function setupIpcHandlers() {
-  log.info('🔌 IPC event handlers ayarlanıyor...')
+  logger.info('🔌 IPC event handlers ayarlanıyor...')
 
   // --- Authentication ---
   ipcMain.on('set-auth-credentials', (event, { token, baseUrl }) => {
-    log.info('🔑 API kimlik bilgileri alındı, ayarlanıyor...')
+    logger.info('🔑 API kimlik bilgileri alındı, ayarlanıyor...')
     try {
       diaryService.setApiConfig({ token, baseUrl });
-      log.success('✅ API kimlik bilgileri başarıyla ayarlandı.');
+      logger.success('✅ API kimlik bilgileri başarıyla ayarlandı.');
     } catch (error) {
-      log.error('❌ API kimlik bilgilerini ayarlarken hata oluştu:', error);
+      logger.error('❌ API kimlik bilgilerini ayarlarken hata oluştu:', error);
     }
   });
 
@@ -562,7 +562,7 @@ function setupIpcHandlers() {
   })
 
   ipcMain.handle('entries:create', async (event, entryData) => {
-    log.info('✨ Yeni günlük kaydı oluşturuluyor...', { title: entryData.title })
+    logger.info('✨ Yeni günlük kaydı oluşturuluyor...', { title: entryData.title })
     return diaryService.createEntry(entryData)
   })
 
@@ -682,11 +682,11 @@ function setupIpcHandlers() {
       if (isValid) {
         passwordAttempts = 0
         isAppLocked = false
-        log.info('✅ Şifre doğru - uygulama kilidi açıldı')
+        logger.info('✅ Şifre doğru - uygulama kilidi açıldı')
         return { success: true }
       } else {
         passwordAttempts++
-        log.warn(`❌ Yanlış şifre - deneme ${passwordAttempts}/${MAX_PASSWORD_ATTEMPTS}`)
+        logger.warn(`❌ Yanlış şifre - deneme ${passwordAttempts}/${MAX_PASSWORD_ATTEMPTS}`)
         return { success: false, attempts: passwordAttempts, maxAttempts: MAX_PASSWORD_ATTEMPTS }
       }
     } catch (error) {
@@ -736,10 +736,10 @@ function setupIpcHandlers() {
       const hashedPassword = await EncryptionService.hashPassword(password)
       await store.set('password.hash', hashedPassword)
       await store.set('settings.passwordProtection', true)
-      log.info('🔐 Şifre koruması ayarlandı')
+      logger.info('🔐 Şifre koruması ayarlandı')
       return { success: true }
     } catch (error) {
-      log.error('❌ Şifre ayarlama hatası:', error)
+      logger.error('❌ Şifre ayarlama hatası:', error)
       throw error
     }
   })
@@ -754,7 +754,7 @@ function setupIpcHandlers() {
       const isValid = await EncryptionService.verifyPassword(password, hashedPassword)
       return { valid: isValid }
     } catch (error) {
-      log.error('❌ Şifre doğrulama hatası:', error)
+      logger.error('❌ Şifre doğrulama hatası:', error)
       return { valid: false, error: error.message }
     }
   })
@@ -763,10 +763,10 @@ function setupIpcHandlers() {
     try {
       await store.delete('password.hash')
       await store.set('settings.passwordProtection', false)
-      log.info('🔓 Şifre koruması kaldırıldı')
+      logger.info('🔓 Şifre koruması kaldırıldı')
       return { success: true }
     } catch (error) {
-      log.error('❌ Şifre kaldırma hatası:', error)
+      logger.error('❌ Şifre kaldırma hatası:', error)
       throw error
     }
   })
@@ -777,7 +777,7 @@ function setupIpcHandlers() {
       const isEnabled = await store.get('settings.passwordProtection', false)
       return { hasPassword, isEnabled }
     } catch (error) {
-      log.error('❌ Şifre kontrol hatası:', error)
+      logger.error('❌ Şifre kontrol hatası:', error)
       return { hasPassword: false, isEnabled: false }
     }
   })
@@ -802,10 +802,10 @@ function setupIpcHandlers() {
       
       fs.writeFileSync(filePath, JSON.stringify(backup, null, 2))
       
-      log.info(`💾 Otomatik yedek oluşturuldu: ${fileName}`)
+      logger.info(`💾 Otomatik yedek oluşturuldu: ${fileName}`)
       return { success: true, filePath }
     } catch (error) {
-      log.error('❌ Otomatik yedekleme hatası:', error)
+      logger.error('❌ Otomatik yedekleme hatası:', error)
       return { success: false, error: error.message }
     }
   })
@@ -824,7 +824,7 @@ function setupIpcHandlers() {
     return process.platform
   })
 
-  log.info('✅ IPC handlers kuruldu')
+  logger.info('✅ IPC handlers kuruldu')
 }
 
 // Auto updater setup
@@ -842,16 +842,16 @@ function setupAutoUpdater() {
     })
   })
 
-  autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox(mainWindow, {
+  autoUpdater.on('update-downloaded', (info) => {
+    logger.info('Update downloaded:', info);
+    const dialogOpts = {
       type: 'info',
       title: 'Güncelleme Hazır',
       message: 'Güncelleme indirildi. Uygulamayı yeniden başlatmak istiyor musunuz?',
       buttons: ['Şimdi Yeniden Başlat', 'Sonra']
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall()
-      }
+    }
+    dialog.showMessageBox(mainWindow, dialogOpts).then((returnValue) => {
+      if (returnValue.response === 0) autoUpdater.quitAndInstall()
     })
   })
 }
@@ -860,7 +860,7 @@ function setupAutoUpdater() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  log.info('🚀 Electron uygulaması başlatılıyor...')
+  logger.info('🚀 Electron uygulaması başlatılıyor...')
   
   // Set app name
   app.setName('Günce Defteri')
@@ -903,7 +903,7 @@ app.whenReady().then(async () => {
 
 // Tüm pencereler kapandığında
 app.on('window-all-closed', async () => {
-  log.info('🔒 Tüm pencereler kapatıldı')
+  logger.info('🔒 Tüm pencereler kapatıldı')
   
   // Veritabanı bağlantısını kapat
   await closeDatabase()
@@ -925,22 +925,22 @@ app.on('activate', () => {
 app.on('web-contents-created', (event, contents) => {
   contents.on('new-window', (event, navigationUrl) => {
     event.preventDefault()
-    log.warn('🚫 Güvenlik: Yeni pencere engellendi:', navigationUrl)
+    logger.warn('🚫 Güvenlik: Yeni pencere engellendi:', navigationUrl)
   })
 })
 
 // Uygulama çıkışında temizlik
 app.on('before-quit', async () => {
-  log.info('🧹 Uygulama kapanıyor, temizlik yapılıyor...')
+  logger.info('🧹 Uygulama kapanıyor, temizlik yapılıyor...')
   try {
     await closeDatabase()
   } catch (error) {
-    log.error('❌ Database kapatma hatası:', error)
+    logger.error('❌ Database kapatma hatası:', error)
   }
   
   // Force kill eski process'leri
   setTimeout(() => {
-    log.warn('⚠️ Force quit - process zorla sonlandırılıyor')
+    logger.warn('⚠️ Force quit - process zorla sonlandırılıyor')
     process.exit(0)
   }, 3000)
 })
@@ -954,7 +954,7 @@ app.on('web-contents-created', (event, contents) => {
     if (allowedPermissions.includes(permission)) {
       callback(true)
     } else {
-      log.warn(`🚫 Güvenlik: İzin reddedildi: ${permission}`)
+      logger.warn(`🚫 Güvenlik: İzin reddedildi: ${permission}`)
       callback(false)
     }
   })

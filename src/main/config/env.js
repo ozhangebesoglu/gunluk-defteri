@@ -88,13 +88,13 @@ class EnvironmentConfig {
 
   // Supabase Configuration
   getSupabaseConfig() {
-    const url = this.isProd && process.env.PROD_SUPABASE_URL 
-      ? process.env.PROD_SUPABASE_URL 
-      : process.env.SUPABASE_URL
+    const url = (this.isProd && process.env.PROD_SUPABASE_URL)
+      ? process.env.PROD_SUPABASE_URL
+      : process.env.SUPABASE_URL || 'https://nbjnmhtgluctoeyrbgkd.supabase.co'
 
-    const key = this.isProd && process.env.PROD_SUPABASE_KEY
+    const key = (this.isProd && process.env.PROD_SUPABASE_KEY)
       ? process.env.PROD_SUPABASE_KEY
-      : process.env.SUPABASE_ANON_KEY
+      : process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iam5taHRnbHVjdG9leXJiZ2tkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5ODM4NDQsImV4cCI6MjA1MTU1OTg0NH0.FmFuLOb5'
 
     if (!url || !key) {
       throw new Error('Supabase configuration missing. Check SUPABASE_URL and SUPABASE_ANON_KEY environment variables.')

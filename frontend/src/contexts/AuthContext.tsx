@@ -44,35 +44,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // ==========================================
-// DEMO USER DATA
-// ==========================================
-
-const DEMO_ENTRIES = [
-  {
-    id: 'demo-1',
-    title: 'İlk Günce Yazım',
-    content: 'Bugün günce defteri uygulamasını denemeye başladım. Gerçekten kullanışlı görünüyor!',
-    entry_date: new Date().toISOString(),
-    mood: 'positive',
-    sentiment: 'positive',
-    word_count: 15,
-    is_favorite: true,
-    tags: ['başlangıç', 'test']
-  },
-  {
-    id: 'demo-2',
-    title: 'Güzel Bir Gün',
-    content: 'Bugün hava çok güzeldi. Park\'ta yürüyüş yaptım ve kitap okudum. Kendimi çok iyi hissediyorum.',
-    entry_date: new Date(Date.now() - 86400000).toISOString(), // 1 gün önce
-    mood: 'very_positive',
-    sentiment: 'very_positive',
-    word_count: 18,
-    is_favorite: false,
-    tags: ['doğa', 'kitap', 'yürüyüş']
-  }
-]
-
-// ==========================================
 // CONTEXT PROVIDER
 // ==========================================
 
@@ -283,33 +254,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       setSyncStatus({ status: 'syncing' })
-
-      // Demo kullanıcı kontrolü
-      if (email === 'demo@guncedefteri.com' && password === 'demo123') {
-        // Demo kullanıcı için fake session oluştur
-        const demoUser = {
-          id: 'demo-user-id',
-          email: 'demo@guncedefteri.com',
-          user_metadata: {
-            full_name: 'Demo Kullanıcı'
-          }
-        }
-        
-        // Local storage'a demo verilerini kaydet
-        localStorage.setItem('demo_user', JSON.stringify(demoUser))
-        localStorage.setItem('demo_entries', JSON.stringify(DEMO_ENTRIES))
-        
-        setUser(demoUser as any)
-        setProfile({ 
-          id: 'demo-user-id', 
-          email: 'demo@guncedefteri.com', 
-          full_name: 'Demo Kullanıcı' 
-        })
-        setSyncStatus({ status: 'connected', lastSync: new Date() })
-        
-        logger.success('[AUTH] Demo user signed in')
-        return { error: undefined }
-      }
 
       const { error } = await supabaseSignInWithEmail(email, password)
       

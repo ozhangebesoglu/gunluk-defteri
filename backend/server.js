@@ -32,7 +32,13 @@ const logger = {
 const app = express();
 const config = envConfig.getConfig();
 const PORT = config.server.port;
-const LOG_PATH = process.env.AUDIT_LOG_PATH || './backend/logs/audit.log';
+const LOG_DIR = path.join(__dirname, 'logs');
+const LOG_PATH = process.env.AUDIT_LOG_PATH || path.join(LOG_DIR, 'audit.log');
+
+// Log dizininin var olduğundan emin ol
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
 
 // --- Sentry Initialization ---
 if (config.isProd && !config.sentry.dsn) {
@@ -448,7 +454,7 @@ app.put('/api/v1/user/password', protect, csrfProtection, passwordUpdateLimiter,
 // Routes that don't change state don't need CSRF protection
 app.get('/api/v1/entries', protect, getEntries);
 app.get('/api/v1/entries/:id', protect, getEntry);
-app.get('/api/v1/entries/stats', protect, getStats);
+app.get('/api/v1/stats', protect, getStats);
 
 // Serve Frontend in Production
 if (config.isProd) {
