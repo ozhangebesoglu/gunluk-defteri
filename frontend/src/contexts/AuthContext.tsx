@@ -23,7 +23,7 @@ import { API_URL, isElectron } from '../config/env'
 // CONTEXT TYPES
 // ==========================================
 
-interface SyncStatus {
+export interface SyncStatus {
   status: 'connected' | 'disconnected' | 'syncing' | 'synced' | 'offline' | 'conflict' | 'error'
   lastSync?: Date
   pendingChanges?: number

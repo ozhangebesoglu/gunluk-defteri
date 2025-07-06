@@ -6,7 +6,7 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Wifi, WifiOff, AlertCircle, RotateCw } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, SyncStatus as SyncStatusType } from '../contexts/AuthContext'
 
 const SyncStatus: React.FC = () => {
   const { syncStatus, user } = useAuth()
@@ -16,7 +16,7 @@ const SyncStatus: React.FC = () => {
 
   // Only show the indicator for "active" states that require user attention.
   // For 'connected' or 'synced' state, we don't need a persistent indicator.
-  const activeStates: SyncStatus['status'][] = ['syncing', 'offline', 'conflict', 'error'];
+  const activeStates: SyncStatusType['status'][] = ['syncing', 'offline', 'conflict', 'error'];
   if (!syncStatus || !activeStates.includes(syncStatus.status)) {
     return null;
   }

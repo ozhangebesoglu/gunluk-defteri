@@ -184,7 +184,7 @@ const Statistics: React.FC = () => {
                       <div key={day} className="flex-1 flex flex-col items-center gap-2">
                   <motion.div
                               initial={{ height: 0 }}
-                              animate={{ height: `${maxActivity > 0 ? (stats.activityByDay[day] || 0) / maxActivity * 100 : 0}%` }}
+                              animate={{ height: `${maxActivity > 0 ? ((stats.activityByDay || {})[day] || 0) / maxActivity * 100 : 0}%` }}
                               transition={{ duration: 0.8, ease: 'easeOut' }}
                               className="w-full bg-gradient-to-t from-amber-400 to-orange-500 rounded-t-lg"
                           />

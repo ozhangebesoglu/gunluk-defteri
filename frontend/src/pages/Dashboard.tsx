@@ -94,8 +94,8 @@ function Dashboard() {
     .join('; ');
 
   const recentEntries = paginatedData?.data ?? [];
-  const totalEntries = paginatedData?.pagination?.totalEntries ?? 0;
-  const totalPages = paginatedData?.pagination?.totalPages ?? 1;
+  const totalEntries = paginatedData?.totalCount ?? 0;
+  const totalPages = Math.ceil(totalEntries / entriesPerPage) || 1;
 
   // Güvenli tarih parsing fonksiyonu
   const parseEntryDate = (dateValue: string | Date): Date => {

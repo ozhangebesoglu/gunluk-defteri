@@ -1,4 +1,4 @@
- b// Single-Mode API Service - Always uses the backend API
+// Single-Mode API Service - Always uses the backend API
 import { logger } from '../utils/logger'
 import { API_URL } from '../config/env'
 import { supabase } from '../lib/supabase'
