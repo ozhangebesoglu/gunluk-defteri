@@ -59,19 +59,20 @@ const DiaryList: React.FC = () => {
     setLoading(true);
     try {
       // API Service kullanımı (dual mode: Electron + Web + Offline)
-      const storedEntries = await apiService.getEntries();
-      setEntries(storedEntries);
+      const response = await apiService.getEntries();
+      const storedEntries = response.data || response; // Backward compatibility
+      setEntries(Array.isArray(storedEntries) ? storedEntries : []);
       
       // Tüm etiketleri topla
       const tags = new Set<string>();
-      storedEntries.forEach((entry: DiaryEntry) => {
+      (Array.isArray(storedEntries) ? storedEntries : []).forEach((entry: DiaryEntry) => {
         if (entry.tags) {
           entry.tags.forEach(tag => tags.add(tag));
         }
       });
       setAllTags(Array.from(tags));
       
-      logger.success(`Diary list loaded (${apiService.mode}): ${storedEntries.length} entries`);
+      logger.success(`Diary list loaded (${apiService.mode}): ${Array.isArray(storedEntries) ? storedEntries.length : 0} entries`);
     } catch (error) {
       logger.error('Failed to load diary entries:', error);
       setEntries([]);
@@ -201,10 +202,20 @@ const DiaryList: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="w-full min-h-full bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center p-4">
+      <div className={`w-full min-h-full flex items-center justify-center p-4 transition-all duration-700 ${
+        isDarkTheme 
+          ? 'bg-rich-brown-900' 
+          : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
+      }`}>
         <div className="text-center">
-          <BookOpen className="h-12 w-12 text-amber-600 animate-pulse mx-auto mb-4" />
-          <p className="text-amber-800 font-medium">Günce kayıtları yükleniyor...</p>
+          <BookOpen className={`h-12 w-12 animate-pulse mx-auto mb-4 transition-colors duration-700 ${
+            isDarkTheme ? 'text-warm-gold-400' : 'text-amber-600'
+          }`} />
+          <p className={`font-medium transition-colors duration-700 ${
+            isDarkTheme ? 'text-rich-brown-200' : 'text-amber-800'
+          }`}>
+            Günce kayıtları yükleniyor...
+          </p>
         </div>
       </div>
     );

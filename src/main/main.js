@@ -1,26 +1,12 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, Menu, Notification } = require('electron')
-const path = require('node:path')
-
-// Logging utility - fallback to console if electron-log fails
-let log
-try {
-  log = require('electron-log')
-} catch (error) {
-  console.warn('electron-log not available, using console fallback')
-  log = {
-    info: console.log,
-    warn: console.warn,
-    error: console.error
-  }
-}
-
-const { autoUpdater } = require('electron-updater')
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron')
+const path = require('path')
 const Store = require('electron-store')
 const { initDatabase, closeDatabase, runMigrations, healthCheck } = require('./database')
-const DiaryService = require('./services/diaryService')
+const diaryService = require('./services/diaryService')
 const EncryptionService = require('./services/encryptionService')
-const SentimentService = require('./services/sentimentService')
+const createSentimentService = require('./services/sentimentService')
 const logger = require('./utils/logger')
+const db = require('./database')
 
 // Initialize electron-store
 const store = new Store()
@@ -97,6 +83,8 @@ function createMainWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    resizable: true, // Pencere boyutlandırma izni
+    maximizable: true, // Maksimize izni
     show: false, // Hazır olana kadar gizle
     title: 'Günce Defteri', // Window title
     
@@ -497,7 +485,7 @@ ipcMain.handle('app:getVersion', () => {
 // Diary handlers
 ipcMain.handle('diary:getEntries', async (event, filters = {}) => {
   try {
-    return await DiaryService.getEntries(filters)
+    return await diaryService.getEntries(filters)
   } catch (error) {
     log.error('Failed to get entries:', error)
     throw error
@@ -506,7 +494,7 @@ ipcMain.handle('diary:getEntries', async (event, filters = {}) => {
 
 ipcMain.handle('diary:getEntry', async (event, id) => {
   try {
-    return await DiaryService.getEntry(id)
+    return await diaryService.getEntry(id)
   } catch (error) {
     log.error('Failed to get entry:', error)
     throw error
@@ -515,7 +503,7 @@ ipcMain.handle('diary:getEntry', async (event, id) => {
 
 ipcMain.handle('diary:createEntry', async (event, entry) => {
   try {
-    return await DiaryService.createEntry(entry)
+    return await diaryService.createEntry(entry)
   } catch (error) {
     log.error('Failed to create entry:', error)
     throw error
@@ -524,7 +512,7 @@ ipcMain.handle('diary:createEntry', async (event, entry) => {
 
 ipcMain.handle('diary:updateEntry', async (event, id, entry) => {
   try {
-    return await DiaryService.updateEntry(id, entry)
+    return await diaryService.updateEntry(id, entry)
   } catch (error) {
     log.error('Failed to update entry:', error)
     throw error
@@ -533,7 +521,7 @@ ipcMain.handle('diary:updateEntry', async (event, id, entry) => {
 
 ipcMain.handle('diary:deleteEntry', async (event, id) => {
   try {
-    return await DiaryService.deleteEntry(id)
+    return await diaryService.deleteEntry(id)
   } catch (error) {
     log.error('Failed to delete entry:', error)
     throw error
@@ -542,7 +530,7 @@ ipcMain.handle('diary:deleteEntry', async (event, id) => {
 
 ipcMain.handle('diary:deleteAllEntries', async (event) => {
   try {
-    return await DiaryService.deleteAllEntries()
+    return await diaryService.deleteAllEntries()
   } catch (error) {
     log.error('Failed to delete all entries:', error)
     throw error
@@ -550,75 +538,76 @@ ipcMain.handle('diary:deleteAllEntries', async (event) => {
 })
 
 ipcMain.handle('diary:getTags', async (event) => {
-  return await DiaryService.getTags()
+  return await diaryService.getTags()
 })
 
 // IPC Event Handlers
 function setupIpcHandlers() {
-  log.info('🔧 IPC handlers kuruluyor...')
+  log.info('🔌 IPC event handlers ayarlanıyor...')
 
-  // Veritabanı health check
-  ipcMain.handle('db:health-check', async () => {
-    return await healthCheck()
+  // --- Authentication ---
+  ipcMain.on('set-auth-credentials', (event, { token, baseUrl }) => {
+    log.info('🔑 API kimlik bilgileri alındı, ayarlanıyor...')
+    try {
+      diaryService.setApiConfig({ token, baseUrl });
+      log.success('✅ API kimlik bilgileri başarıyla ayarlandı.');
+    } catch (error) {
+      log.error('❌ API kimlik bilgilerini ayarlarken hata oluştu:', error);
+    }
+  });
+
+  // --- Entries ---
+  ipcMain.handle('entries:get-all', async (event, filters) => {
+    return diaryService.getEntries(filters)
   })
 
-  // Günlük CRUD işlemleri
-  ipcMain.handle('diary:get-entries', async (event, filters = {}) => {
-    return await DiaryService.getEntries(filters)
+  ipcMain.handle('entries:create', async (event, entryData) => {
+    log.info('✨ Yeni günlük kaydı oluşturuluyor...', { title: entryData.title })
+    return diaryService.createEntry(entryData)
   })
 
-  ipcMain.handle('diary:get-entry', async (event, id) => {
-    return await DiaryService.getEntry(id)
+  ipcMain.handle('entries:get-entry', async (event, id) => {
+    return diaryService.getEntry(id)
   })
 
-  ipcMain.handle('diary:create-entry', async (event, entryData) => {
-    return await DiaryService.createEntry(entryData)
+  ipcMain.handle('entries:update-entry', async (event, id, entryData) => {
+    return diaryService.updateEntry(id, entryData)
   })
 
-  ipcMain.handle('diary:update-entry', async (event, id, entryData) => {
-    return await DiaryService.updateEntry(id, entryData)
+  ipcMain.handle('entries:delete-entry', async (event, id) => {
+    return diaryService.deleteEntry(id)
   })
 
-  ipcMain.handle('diary:delete-entry', async (event, id) => {
-    return await DiaryService.deleteEntry(id)
+  ipcMain.handle('entries:get-tags', async () => {
+    return diaryService.getTags()
   })
 
-  // Etiket işlemleri
-  ipcMain.handle('diary:get-tags', async () => {
-    return await DiaryService.getTags()
+  ipcMain.handle('entries:get-statistics', async () => {
+    return diaryService.getStatistics()
   })
 
-  // İstatistik işlemleri
-  ipcMain.handle('diary:get-statistics', async () => {
-    return await DiaryService.getStatistics()
+  ipcMain.handle('entries:search', async (event, query, filters = {}) => {
+    return diaryService.searchEntries(query, filters)
   })
 
-  // Arama işlemleri
-  ipcMain.handle('diary:search', async (event, query, filters = {}) => {
-    return await DiaryService.searchEntries(query, filters)
-  })
-
-  // Duygu analizi
   ipcMain.handle('sentiment:analyze', async (event, text) => {
-    return await SentimentService.analyzeSentiment(text)
+    return SentimentService.analyzeSentiment(text)
   })
 
-  // Şifreleme işlemleri
   ipcMain.handle('encrypt:data', async (event, data, password) => {
-    return await EncryptionService.encrypt(data, password)
+    return EncryptionService.encrypt(data, password)
   })
 
   ipcMain.handle('decrypt:data', async (event, encryptedData, password) => {
-    return await EncryptionService.decrypt(encryptedData, password)
+    return EncryptionService.decrypt(encryptedData, password)
   })
 
-  // Yedekleme işlemleri
   ipcMain.handle('backup:create', async () => {
-    return await DiaryService.createBackup()
+    return diaryService.createBackup()
   })
 
   ipcMain.handle('backup:restore', async (event, backupData) => {
-    return await DiaryService.restoreBackup(backupData)
+    return diaryService.restoreBackup(backupData)
   })
 
   // 📱 Settings Management
@@ -800,7 +789,7 @@ function setupIpcHandlers() {
     }
     
     try {
-      const backup = await DiaryService.createBackup()
+      const backup = await diaryService.createBackup()
       const fs = require('fs')
       const backupDir = path.join(app.getPath('userData'), 'backups')
       
@@ -867,7 +856,9 @@ function setupAutoUpdater() {
   })
 }
 
-// Uygulama olayları
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   log.info('🚀 Electron uygulaması başlatılıyor...')
   
@@ -875,39 +866,39 @@ app.whenReady().then(async () => {
   app.setName('Günce Defteri')
   
   try {
-    // Veritabanını başlat
-    await initDatabase()
-    await runMigrations()
-    
-    // Initialize default password for testing
-    await initDefaultPassword()
-    
-    // IPC handlers'ı kur
-    setupIpcHandlers()
-    
-    // Notification sistemi başlat
-    initNotificationSystem()
-    
-    // Setup auto updater
-    setupAutoUpdater()
-    
-    // Initialize password protection
-    // Note: Actual password checking is done in ready-to-show event
-    isAppLocked = appSettings.passwordProtection
-    
-    // Create main window
-    createMainWindow()
-    
-    // Create application menu
-    createApplicationMenu()
-    
-    log.info('🎉 Uygulama başarıyla başlatıldı!')
+    // Veritabanını başlat ve migration'ları çalıştır
+    await db.initDatabase();
+    await db.runMigrations();
+    logger.info('Database initialized and migrations are checked.');
   } catch (error) {
-    log.error('❌ Uygulama başlatma hatası:', error)
-    dialog.showErrorBox('Başlatma Hatası', 
-      'Uygulama başlatılamadı. Lütfen PostgreSQL veritabanının çalıştığından emin olun.')
-    app.quit()
+    logger.error('Failed to initialize database or run migrations:', error);
+    // Burada uygulamayı kapatmak veya bir hata penceresi göstermek mantıklı olabilir.
+    app.quit();
+    return;
   }
+
+  createMainWindow()
+    
+  // İnternet durumunu dinle
+  const onlineStatusWindow = new BrowserWindow({ width: 0, height: 0, show: false })
+  onlineStatusWindow.loadURL(`data:text/html, <script>
+    window.addEventListener('online', () => require('electron').ipcRenderer.send('online-status-changed', 'online'));
+    window.addEventListener('offline', () => require('electron').ipcRenderer.send('online-status-changed', 'offline'));
+  </script>`)
+
+  ipcMain.on('online-status-changed', (event, status) => {
+    const isOnline = status === 'online';
+    diaryService.setOnlineStatus(isOnline);
+  });
+
+  // İlk durumu ayarla
+  diaryService.setOnlineStatus(true); // Başlangıçta online varsay
+
+  app.on('activate', function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+  })
 })
 
 // Tüm pencereler kapandığında
@@ -968,3 +959,34 @@ app.on('web-contents-created', (event, contents) => {
     }
   })
 }) 
+
+// Renderer'dan gelen API config'ini al ve service'e ilet
+ipcMain.on('set-api-config', (event, apiConfig) => {
+  logger.info('API config received from renderer:', { hasToken: !!apiConfig.token, baseUrl: apiConfig.baseUrl });
+  diaryService.setApiConfig(apiConfig);
+  // İnternet varsa senkronizasyonu tetikle
+  diaryService.synchronize(); 
+});
+
+// IPC handlers (CRUD) - Artık diaryService'i kullanacaklar
+ipcMain.handle('get-entries', async (event, filters) => {
+  return diaryService.getEntries(filters);
+});
+
+ipcMain.handle('get-entry', async (event, id) => {
+  return diaryService.getEntry(id);
+});
+
+ipcMain.handle('create-entry', async (event, entryData) => {
+  return diaryService.createEntry(entryData);
+});
+
+ipcMain.handle('update-entry', async (event, { id, entryData }) => {
+  return diaryService.updateEntry(id, entryData);
+});
+
+ipcMain.handle('delete-entry', async (event, id) => {
+  return diaryService.deleteEntry(id);
+});
+
+// ... (diğer IPC handler'ları da benzer şekilde güncellenebilir) ... 

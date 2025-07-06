@@ -1,118 +1,112 @@
-import React from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { HashRouter as Router, Routes, Route } from 'react-router-dom'
+// ==========================================
+// GÜNCE DEFTERI - Main App Component (Context7 Uyumlu)
+// Multi-platform sync + authentication
+// ==========================================
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { AnimatePresence } from 'framer-motion';
+import ErrorFallback from './components/ui/ErrorFallback';
+import { Toaster } from 'react-hot-toast';
+import * as Sentry from "@sentry/react";
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import DiaryList from './pages/DiaryList';
+import DiaryEntry from './pages/DiaryEntry';
+import NewEntry from './pages/NewEntry';
+import Settings from './pages/Settings';
+import Auth from './pages/Auth';
+import Memories from './pages/Memories';
+import Statistics from './pages/Statistics';
+import RequestPasswordReset from './pages/RequestPasswordReset';
+import UpdatePassword from './pages/UpdatePassword';
 
 // Components
-import Layout from './components/Layout/Layout'
+import Layout from './components/Layout/Layout';
+import SyncStatus from './components/SyncStatus';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
-import Dashboard from './pages/Dashboard'
-import DiaryList from './pages/DiaryList'
-import DiaryEntry from './pages/DiaryEntry'
-import NewEntry from './pages/NewEntry'
-import Settings from './pages/Settings'
-import Statistics from './pages/Statistics'
-import Memories from './pages/Memories'
+const queryClient = new QueryClient();
 
-// Context
-import { ThemeProvider } from './contexts/ThemeContext'
+const PrivateRoutes: React.FC = () => {
+  const { user, loading } = useAuth();
 
-// Create query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 dakika
-      gcTime: 10 * 60 * 1000, // 10 dakika (garbage collection time)
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center bg-amber-50 dark:bg-rich-brown-900"><LoadingSpinner /></div>;
+  }
 
-// Global types imported from vite-env.d.ts
+  return user ? <Outlet /> : <Navigate to="/auth" />;
+};
 
-function App() {
-  // Development mode check
-  const isDev = window.electronDev?.isDev || false
-
-  // Health check on startup
-  React.useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        if (window.electronAPI?.db?.healthCheck) {
-          const health = await window.electronAPI.db.healthCheck()
-          console.log('🏥 Database health check:', health)
-        }
-      } catch (error) {
-        console.error('❌ Database health check failed:', error)
-      }
-    }
-
-    checkHealth()
-  }, [])
-
-  // Electron notification navigation listener
-  React.useEffect(() => {
-    if (window.electronAPI?.on?.navigateToNewEntry) {
-      const removeListener = window.electronAPI.on.navigateToNewEntry(() => {
-        // Navigate to new entry page when notification is clicked
-        window.location.hash = '#/new-entry'
-        console.log('📝 Notification clicked - navigating to new entry')
-      })
-
-      return removeListener
-    }
-  }, [])
-
-  // Keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl+N or Cmd+N - New entry
-      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
-        event.preventDefault()
-        // Navigate to new entry page
-        window.location.hash = '#/new-entry'
-      }
-      
-      // Ctrl+S or Cmd+S - Save entry (handled by individual components)
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault()
-        // This will be handled by the entry editing component
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
+const AppWrapper: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <Router>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/diary-list" element={<DiaryList />} />
-              <Route path="/entry/:id" element={<DiaryEntry />} />
-              <Route path="/diary/:id" element={<DiaryEntry />} />
-              <Route path="/new-entry" element={<NewEntry />} />
-              <Route path="/statistics" element={<Statistics />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/memories" element={<Memories />} />
-              <Route path="/anılar" element={<Memories />} />
-            </Routes>
-          </Layout>
-          
-          {/* Development Info */}
-          {isDev && (
-            <div className="fixed bottom-3 right-3 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-xs z-50">
-              🔧 Dev Mode | Electron {window.electronDev?.electronVersion}
-            </div>
-          )}
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
-export default App
+function App() {
+  const { isDarkTheme } = useTheme();
+
+  return (
+    <Sentry.ErrorBoundary 
+      fallback={({ error, resetError }) => (
+        <ErrorFallback 
+          error={error} 
+          resetErrorBoundary={resetError} 
+        />
+      )}
+    >
+        <Router>
+          <div className={isDarkTheme ? 'dark' : 'light'}>
+            <div className="app-container bg-light-bg dark:bg-dark-bg">
+                <Toaster
+                  position="bottom-center"
+                  toastOptions={{
+                    duration: 3000,
+                    style: {
+                      background: isDarkTheme ? '#333' : '#fff',
+                      color: isDarkTheme ? '#fff' : '#333',
+                    },
+                  }}
+                />
+                <AnimatePresence mode="wait">
+                  <Routes>
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth/request-reset" element={<RequestPasswordReset />} />
+                    <Route path="/update-password" element={<UpdatePassword />} />
+                    
+                    <Route element={<PrivateRoutes />}>
+                      <Route element={<Layout><Outlet /></Layout>}>
+                        <Route path="/" element={<Navigate to="/dashboard" />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/entries" element={<DiaryList />} />
+                        <Route path="/entries/:id" element={<DiaryEntry />} />
+                        <Route path="/new" element={<NewEntry />} />
+                        <Route path="/memories" element={<Memories />} />
+                        <Route path="/stats" element={<Statistics />} />
+                        <Route path="/settings" element={<Settings />} />
+                      </Route>
+                    </Route>
+
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </AnimatePresence>
+                <SyncStatus />
+            </div>
+          </div>
+        </Router>
+    </Sentry.ErrorBoundary>
+  );
+}
+
+export default AppWrapper;

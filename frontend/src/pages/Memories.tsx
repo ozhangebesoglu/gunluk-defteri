@@ -35,9 +35,11 @@ const Memories: React.FC = () => {
     try {
       setLoading(true);
       // API Service kullanımı (dual mode: Electron + Web + Offline)
-    const storedEntries = await apiService.getEntries()
-    console.log(`💖 Anılar yüklendi (${apiService.mode}):`, storedEntries.length)
-      setEntries(storedEntries.filter((entry: DiaryEntry) => entry.is_favorite));
+      const response = await apiService.getEntries();
+      const storedEntries = response.data || response; // Backward compatibility
+      const entriesArray = Array.isArray(storedEntries) ? storedEntries : [];
+      console.log(`💖 Anılar yüklendi (${apiService.mode}):`, entriesArray.length)
+      setEntries(entriesArray.filter((entry: DiaryEntry) => entry.is_favorite));
     } catch (error) {
       console.error('❌ Anılar yüklenirken hata:', error);
     } finally {
@@ -318,33 +320,107 @@ const Memories: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-16"
           >
-            <Heart className={`h-16 w-16 mx-auto mb-6 transition-colors duration-700 ${
-              isDarkTheme ? 'text-amber-400' : 'text-amber-500'
-            }`} />
-            <h3 className={`text-xl font-semibold mb-3 transition-colors duration-700 ${
-              isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
-            }`}>
-              {searchTerm || selectedYear !== 'all' || selectedSentiment ? 'Arama kriterlerinize uygun anı bulunamadı' : 'Henüz hiç favori anınız yok'}
-            </h3>
-            <p className={`mb-6 transition-colors duration-700 ${
-              isDarkTheme ? 'text-rich-brown-200' : 'text-amber-700'
-            }`}>
-              {searchTerm || selectedYear !== 'all' || selectedSentiment 
-                                  ? 'Farklı filtreler deneyebilir veya tüm güncelerinizi görüntüleyebilirsiniz.'
-                  : 'Özel günce yazılarınızı favoriye ekleyerek buradan kolayca ulaşabilirsiniz.'}
-            </p>
-            <motion.button
-              onClick={() => navigate('/diary-list')}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-700 ${
-                isDarkTheme 
-                  ? 'bg-gradient-to-r from-warm-gold-500 to-rich-brown-700 text-rich-brown-900 hover:from-warm-gold-400 hover:to-rich-brown-600' 
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
-              }`}
-            >
-                              Tüm Güncelere Git
-            </motion.button>
+            {searchTerm || selectedYear !== 'all' || selectedSentiment ? (
+              // Filtre uygulandığında
+              <>
+                <Heart className={`h-16 w-16 mx-auto mb-6 transition-colors duration-700 ${
+                  isDarkTheme ? 'text-amber-400' : 'text-amber-500'
+                }`} />
+                <h3 className={`text-xl font-semibold mb-3 transition-colors duration-700 ${
+                  isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
+                }`}>
+                  Arama kriterlerinize uygun anı bulunamadı
+                </h3>
+                <p className={`mb-6 transition-colors duration-700 ${
+                  isDarkTheme ? 'text-rich-brown-200' : 'text-amber-700'
+                }`}>
+                  Farklı filtreler deneyebilir veya tüm güncelerinizi görüntüleyebilirsiniz.
+                </p>
+                <motion.button
+                  onClick={() => navigate('/entries')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-700 ${
+                    isDarkTheme 
+                      ? 'bg-gradient-to-r from-warm-gold-500 to-rich-brown-700 text-rich-brown-900 hover:from-warm-gold-400 hover:to-rich-brown-600' 
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+                  }`}
+                >
+                  Tüm Güncelere Git
+                </motion.button>
+              </>
+            ) : (
+              // Hiç favori anı yoksa
+              <>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", duration: 0.5 }}
+                  className="mb-8"
+                >
+                  <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center mb-6 transition-all duration-700 ${
+                    isDarkTheme 
+                      ? 'bg-gradient-to-br from-warm-gold-400/20 to-rich-brown-600/20 border-2 border-warm-gold-400/30' 
+                      : 'bg-gradient-to-br from-amber-100 to-orange-100 border-2 border-amber-200'
+                  }`}>
+                    <Heart className={`h-16 w-16 transition-colors duration-700 ${
+                      isDarkTheme ? 'text-warm-gold-400' : 'text-amber-500'
+                    }`} />
+                  </div>
+                </motion.div>
+
+                <h3 className={`text-2xl font-serif font-bold mb-4 transition-colors duration-700 ${
+                  isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
+                }`}>
+                  Henüz hiç anınız yok ✨
+                </h3>
+
+                <div className={`max-w-md mx-auto space-y-4 mb-8 text-left transition-colors duration-700 ${
+                  isDarkTheme ? 'text-rich-brown-200' : 'text-amber-700'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">📝</span>
+                    <p>Önce güzel bir günce yazısı yazın</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">❤️</span>
+                    <p>Yazınızın yanındaki kalp ikonuna tıklayarak favorileyin</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">🌟</span>
+                    <p>Favori anılarınız burada görünecek!</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <motion.button
+                    onClick={() => navigate('/new')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`px-8 py-4 rounded-xl font-medium shadow-lg transition-all duration-700 ${
+                      isDarkTheme 
+                        ? 'bg-gradient-to-r from-warm-gold-500 to-amber-500 text-rich-brown-900 hover:from-warm-gold-400 hover:to-amber-400' 
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+                    }`}
+                  >
+                    ✍️ İlk Günce Yazım
+                  </motion.button>
+
+                  <motion.button
+                    onClick={() => navigate('/entries')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`px-8 py-4 rounded-xl font-medium border-2 transition-all duration-700 ${
+                      isDarkTheme 
+                        ? 'border-warm-gold-400 text-warm-gold-400 hover:bg-warm-gold-400 hover:text-rich-brown-900' 
+                        : 'border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white'
+                    }`}
+                  >
+                    📚 Tüm Güncelere Git
+                  </motion.button>
+                </div>
+              </>
+            )}
           </motion.div>
         ) : (
           <div className="space-y-8">

@@ -1,5 +1,5 @@
 const CryptoJS = require('crypto-js')
-// const argon2 = require('argon2') // Geçici disable
+const argon2 = require('argon2')
 
 // Logging utility - fallback to console if electron-log fails
 let log
@@ -16,29 +16,23 @@ try {
 
 class EncryptionService {
   constructor() {
-    this.algorithm = 'AES'
-    // this.keyDerivationOptions = {
-    //   type: argon2.argon2id,
-    //   memoryCost: 2 ** 16, // 64 MB
-    //   timeCost: 3,
-    //   parallelism: 1,
-    // }
+    this.algorithm = 'AES-256-GCM' // GCM modu daha güvenli
+    this.keyDerivationOptions = {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16, // 65536 KB (64 MB)
+      timeCost: 4,
+      parallelism: 2,
+      hashLength: 32
+    }
   }
 
   /**
    * Parola hash'leme (kullanıcı şifreleri için)
    */
-  hashPassword(password) {
+  async hashPassword(password) {
     try {
-      // Güvenli salt ile hash
-      const salt = CryptoJS.lib.WordArray.random(256/8)
-      const hash = CryptoJS.PBKDF2(password, salt, {
-        keySize: 256/32,
-        iterations: 10000
-      })
-      
-      // Salt ve hash'i birleştir
-      return salt.toString(CryptoJS.enc.Hex) + ':' + hash.toString(CryptoJS.enc.Hex)
+      const hash = await argon2.hash(password, this.keyDerivationOptions)
+      return hash
     } catch (error) {
       log.error('Password hashing hatası:', error)
       throw new Error('Parola hash\'lenemedi')
@@ -48,22 +42,12 @@ class EncryptionService {
   /**
    * Parola doğrulama
    */
-  verifyPassword(password, storedHash) {
+  async verifyPassword(password, storedHash) {
     try {
-      const [saltHex, hashHex] = storedHash.split(':')
-      if (!saltHex || !hashHex) {
-        return false
-      }
-      
-      const salt = CryptoJS.enc.Hex.parse(saltHex)
-      const hash = CryptoJS.PBKDF2(password, salt, {
-        keySize: 256/32,
-        iterations: 10000
-      })
-      
-      return hash.toString(CryptoJS.enc.Hex) === hashHex
+      return await argon2.verify(storedHash, password)
     } catch (error) {
-      log.error('Password verification hatası:', error)
+      // Argon2, parola uyuşmazlığında da hata fırlatır.
+      log.warn('Password verification failed:', error.message)
       return false
     }
   }
@@ -71,30 +55,39 @@ class EncryptionService {
   /**
    * Metin şifreleme (günlük içerikleri için)
    */
-  encryptText(plainText, password) {
+  async encryptText(plainText, password) {
     try {
-      // Güçlü anahtar türetme
-      const salt = CryptoJS.lib.WordArray.random(256/8)
-      const key = CryptoJS.PBKDF2(password, salt, {
-        keySize: 256/32,
-        iterations: 10000
+      const salt = CryptoJS.lib.WordArray.random(16).toString(CryptoJS.enc.Hex)
+      
+      const key = await argon2.hash(password, {
+        ...this.keyDerivationOptions,
+        salt: Buffer.from(salt, 'hex'),
+        raw: true, // Ham anahtar olarak döndür
       })
 
-      // IV oluştur
-      const iv = CryptoJS.lib.WordArray.random(128/8)
+      // IV (Initialization Vector) oluştur
+      const iv = CryptoJS.lib.WordArray.random(12).toString(CryptoJS.enc.Hex)
 
-      // Şifrele
-      const encrypted = CryptoJS.AES.encrypt(plainText, key, {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      })
+      // Şifrele (AES-GCM ile)
+      const encrypted = CryptoJS.AES.encrypt(plainText, CryptoJS.lib.WordArray.create(key), {
+        iv: CryptoJS.enc.Hex.parse(iv),
+        mode: CryptoJS.mode.GCM,
+        padding: CryptoJS.pad.NoPadding
+      }).toString()
 
-      // Salt, IV ve şifrelenmiş metni birleştir
+      // GCM'den authentication tag'i al (ciphertext'in sonunda)
+      const ciphertext = CryptoJS.enc.Base64.parse(encrypted)
+      const tag = ciphertext.clone()
+      tag.sigBytes = 16
+      tag.clamp()
+      ciphertext.sigBytes -= 16
+      ciphertext.clamp()
+      
       const result = {
-        salt: salt.toString(CryptoJS.enc.Hex),
-        iv: iv.toString(CryptoJS.enc.Hex),
-        encrypted: encrypted.toString()
+        salt: salt,
+        iv: iv,
+        tag: tag.toString(CryptoJS.enc.Hex),
+        encrypted: ciphertext.toString(CryptoJS.enc.Hex)
       }
 
       return JSON.stringify(result)
@@ -107,22 +100,26 @@ class EncryptionService {
   /**
    * Metin çözme
    */
-  decryptText(encryptedData, password) {
+  async decryptText(encryptedData, password) {
     try {
       const data = JSON.parse(encryptedData)
-      const { salt, iv, encrypted } = data
+      const { salt, iv, tag, encrypted } = data
 
       // Anahtarı yeniden türet
-      const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(salt), {
-        keySize: 256/32,
-        iterations: 10000
+      const key = await argon2.hash(password, {
+        ...this.keyDerivationOptions,
+        salt: Buffer.from(salt, 'hex'),
+        raw: true,
       })
+      
+      // ciphertext ve tag'i birleştir
+      const ciphertext = CryptoJS.enc.Hex.parse(encrypted + tag)
 
-      // Çöz
-      const decrypted = CryptoJS.AES.decrypt(encrypted, key, {
+      // Çöz (AES-GCM ile)
+      const decrypted = CryptoJS.AES.decrypt({ ciphertext: ciphertext }, CryptoJS.lib.WordArray.create(key), {
         iv: CryptoJS.enc.Hex.parse(iv),
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
+        mode: CryptoJS.mode.GCM,
+        padding: CryptoJS.pad.NoPadding
       })
 
       const plainText = decrypted.toString(CryptoJS.enc.Utf8)

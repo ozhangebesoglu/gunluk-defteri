@@ -112,6 +112,13 @@ interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI?: ElectronAPI;
+    electron?: {
+      ipcRenderer: {
+        send: (channel: string, data?: any) => void;
+        on: (channel: string, listener: Function) => void;
+        removeAllListeners: (channel: string) => void;
+      };
+    };
     electronDev?: {
       isDev: boolean;
       nodeVersion: string;

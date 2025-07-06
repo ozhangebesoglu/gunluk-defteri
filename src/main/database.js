@@ -211,11 +211,56 @@ async function healthCheck() {
   }
 }
 
+// ==========================================
+// CRUD Fonksiyonları (Çevrimdışı Destekli)
+// ==========================================
+
+const getEntries = (filters = {}) => safeQuery(() => {
+  let query = db('diary_entries').whereNot('sync_status', 'deleted');
+  // Burada filtreleme mantığı eklenebilir, şimdilik basit tutuyoruz.
+  return query.orderBy('entry_date', 'desc');
+}, 'Failed to get entries from local DB');
+
+const getEntryById = (id) => safeQuery(() => {
+  return db('diary_entries').where({ id }).whereNot('sync_status', 'deleted').first();
+}, 'Failed to get entry by ID from local DB');
+
+const createEntry = (entryData) => safeQuery(async () => {
+  const [newEntry] = await db('diary_entries').insert(entryData).returning('*');
+  return newEntry;
+}, 'Failed to create entry in local DB');
+
+const updateEntry = (id, entryData) => safeQuery(async () => {
+  const [updatedEntry] = await db('diary_entries').where({ id }).update(entryData).returning('*');
+  return updatedEntry;
+}, 'Failed to update entry in local DB');
+
+const markEntryAsDeleted = (id) => safeQuery(() => {
+  return db('diary_entries').where({ id }).update({ sync_status: 'deleted' });
+}, 'Failed to mark entry as deleted in local DB');
+
+const getUnsyncedEntries = () => safeQuery(() => {
+  return db('diary_entries').whereNot('sync_status', 'synced');
+}, 'Failed to get unsynced entries from local DB');
+
+const deleteEntry = (id) => safeQuery(() => {
+    // Bu fonksiyon, senkronizasyon sonrası kaydı kalıcı olarak siler.
+    return db('diary_entries').where({ id }).del();
+}, 'Failed to permanently delete entry from local DB');
+
 module.exports = {
   db,
   initDatabase,
   closeDatabase,
   safeQuery,
   runMigrations,
-  healthCheck
+  healthCheck,
+  // Yeni eklenen CRUD fonksiyonları
+  getEntries,
+  getEntryById,
+  createEntry,
+  updateEntry,
+  markEntryAsDeleted,
+  getUnsyncedEntries,
+  deleteEntry,
 } 

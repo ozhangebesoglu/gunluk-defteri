@@ -1,15 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BookOpen, 
-  Calendar as CalendarIcon, 
   PenTool, 
   ChevronLeft, 
   ChevronRight,
   Clock,
-  TrendingUp,
-  Heart,
-  Star
+  Star,
+  AlertTriangle
 } from "lucide-react";
 import { 
   format, 
@@ -24,7 +22,8 @@ import {
 } from "date-fns";
 import { tr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext'
+import { useQuery } from '@tanstack/react-query';
+import { useTheme } from '../contexts/ThemeContext';
 import { apiService, type DiaryEntry } from '../services/api';
 import { logger } from '../utils/logger';
 
@@ -32,57 +31,71 @@ function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-// Using DiaryEntry from api.ts instead of local interface
-
 interface DashboardStats {
-  totalEntries: number;
-  thisMonthEntries: number;
-  favoriteEntries: number;
-  averageWordsPerEntry: number;
-  currentStreak: number;
+  total_entries: number;
+  total_words: number;
+  favorite_entries: number;
 }
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { isDarkTheme, colors } = useTheme();
+  const { isDarkTheme } = useTheme();
   const today = startOfToday();
-  const [, setSelectedDate] = useState(today);
   const [currentMonth, setCurrentMonth] = useState(today);
-  const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalEntries: 0,
-    thisMonthEntries: 0,
-    favoriteEntries: 0,
-    averageWordsPerEntry: 0,
-    currentStreak: 0
+  const [currentPage, setCurrentPage] = useState(1);
+  const entriesPerPage = 5;
+
+  // ==========================================
+  // DATA FETCHING with React Query
+  // ==========================================
+  const { 
+    data: stats, 
+    isLoading: isLoadingStats, 
+    isError: isErrorStats, 
+    error: errorStats 
+  } = useQuery<DashboardStats>({
+    queryKey: ['dashboardStats'],
+    queryFn: () => apiService.getStats(),
+    retry: 1, // Hata durumunda 1 kez daha dene
   });
-  const [loading, setLoading] = useState(true);
 
-  // Verileri yükle
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Query for paginated entries for the "Recent Entries" list
+  const { 
+    data: paginatedData, 
+    isLoading: isLoadingPaginatedEntries,
+    isError: isErrorPaginated,
+    error: errorPaginated
+  } = useQuery({
+    queryKey: ['paginatedEntries', currentPage, entriesPerPage],
+    queryFn: () => apiService.getEntries({ page: currentPage, limit: entriesPerPage }),
+    placeholderData: (previousData) => previousData,
+    retry: 1,
+  });
+  
+  // This query can be kept for the calendar view, or optimized later
+  const { 
+    data: allEntries, 
+    isLoading: isLoadingAllEntries,
+    isError: isErrorAllEntries,
+    error: errorAllEntries
+  } = useQuery<any>({
+    queryKey: ['allEntriesForCalendar'],
+    queryFn: () => apiService.getEntries({ limit: 1000 }), // Limit to prevent crash, calendar can be optimized later
+    retry: 1,
+  });
+  
+  const loading = isLoadingStats || isLoadingPaginatedEntries || isLoadingAllEntries;
+  const isError = isErrorStats || isErrorPaginated || isErrorAllEntries;
+  
+  // Hata mesajlarını birleştir
+  const errorMessages = [errorStats, errorPaginated, errorAllEntries]
+    .filter(Boolean)
+    .map(e => (e as Error).message)
+    .join('; ');
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // API Service kullanımı (dual mode: Electron + Web + Offline)
-      const storedEntries = await apiService.getEntries();
-      logger.success(`Dashboard data loaded (${apiService.mode}): ${storedEntries.length} entries`);
-      
-      setEntries(storedEntries);
-      
-      // İstatistikleri hesapla
-      calculateStats(storedEntries);
-      
-    } catch (error) {
-      logger.error('Dashboard data loading error:', error);
-      setEntries([]);
-      calculateStats([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const recentEntries = paginatedData?.data ?? [];
+  const totalEntries = paginatedData?.pagination?.totalEntries ?? 0;
+  const totalPages = paginatedData?.pagination?.totalPages ?? 1;
 
   // Güvenli tarih parsing fonksiyonu
   const parseEntryDate = (dateValue: string | Date): Date => {
@@ -90,65 +103,24 @@ function Dashboard() {
       return dateValue;
     }
     if (typeof dateValue === 'string') {
-      // ISO string formatında mı kontrol et
       if (dateValue.includes('T') || dateValue.includes('-')) {
         return parseISO(dateValue);
       }
-      // Başka format deneyebiliriz
       return new Date(dateValue);
     }
     return new Date(); // Fallback
   };
-
-  const calculateStats = (entriesData: DiaryEntry[]) => {
-    // Safe array check
-    if (!Array.isArray(entriesData) || entriesData.length === 0) {
-      setStats({
-        totalEntries: 0,
-        thisMonthEntries: 0,
-        favoriteEntries: 0,
-        averageWordsPerEntry: 0,
-        currentStreak: 0
-      });
-      return;
-    }
-
-    const thisMonth = entriesData.filter(entry => {
-      try {
-        const entryDate = parseEntryDate(entry.entry_date);
-        return isSameMonth(entryDate, today);
-      } catch (error) {
-        logger.warn('Date parsing error:', { date: entry.entry_date, error });
-        return false;
-      }
-    });
-    
-    const favoriteCount = entriesData.filter(entry => entry.is_favorite).length;
-    
-    const totalWords = entriesData.reduce((sum, entry) => sum + (entry.word_count || 0), 0);
-    const avgWords = entriesData.length > 0 ? Math.round(totalWords / entriesData.length) : 0;
-
-    setStats({
-      totalEntries: entriesData.length,
-      thisMonthEntries: thisMonth.length,
-      favoriteEntries: favoriteCount,
-      averageWordsPerEntry: avgWords,
-      currentStreak: 5 // Bu değer daha karmaşık bir hesaplama gerektirir
-    });
-  };
-
-  const recentEntries = entries.slice(0, 5);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const previousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
   };
 
   const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
   };
 
   const getSentimentColor = (sentiment?: string) => {
@@ -174,10 +146,9 @@ function Dashboard() {
   };
 
   const hasEntryOnDate = (date: Date) => {
-    return entries.some(entry => {
+    return allEntries?.data?.some((entry: DiaryEntry) => {
       try {
-        const entryDate = parseEntryDate(entry.entry_date);
-        return isSameDay(entryDate, date);
+        return isSameDay(parseEntryDate(entry.entry_date), date);
       } catch (error) {
         logger.warn('Date parsing error:', { date: entry.entry_date, error });
         return false;
@@ -186,28 +157,37 @@ function Dashboard() {
   };
 
   const handleNewEntry = () => {
-    navigate('/new-entry');
+    navigate('/new');
   };
 
   const handleEntryClick = (entryId: string) => {
-    navigate(`/entry/${entryId}`);
+    navigate(`/entries/${entryId}`);
   };
 
   if (loading) {
     return (
-      <div className={`w-full min-h-full flex items-center justify-center p-4 transition-all duration-700 ${
-        isDarkTheme 
-          ? `bg-${colors.background}` 
-          : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
-      }`}>
+      <div className={`w-full min-h-full flex items-center justify-center p-4`}>
         <div className="text-center">
-          <BookOpen className={`h-12 w-12 animate-pulse mx-auto mb-4 transition-colors duration-700 ${
-            isDarkTheme ? `text-${colors.accent}` : 'text-amber-600'
-          }`} />
-          <p className={`font-medium transition-colors duration-700 ${
-            isDarkTheme ? 'text-amber-200' : 'text-amber-800'
-          }`}>
+          <BookOpen className={`h-12 w-12 animate-pulse mx-auto mb-4 text-amber-600`} />
+          <p className={`font-medium text-amber-800`}>
             Günce defteri yükleniyor...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={`w-full min-h-full flex items-center justify-center p-4 ${isDarkTheme ? 'bg-rich-brown-900' : 'bg-red-50'}`}>
+        <div className="text-center p-8 rounded-lg border-2 border-dashed border-red-400 dark:border-red-600">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-800 dark:text-red-300 mb-2">Bir Hata Oluştu</h2>
+          <p className="text-red-600 dark:text-red-400 mb-4">
+            Veriler yüklenirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-2 rounded">
+            Hata Detayı: {errorMessages}
           </p>
         </div>
       </div>
@@ -220,357 +200,121 @@ function Dashboard() {
         ? 'bg-rich-brown-900' 
         : 'bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50'
     }`}>
-      {/* Paper texture overlay */}
-      <div 
-        className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4a574' fill-opacity='0.1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='53' cy='53' r='1'/%3E%3Ccircle cx='13' cy='43' r='1'/%3E%3Ccircle cx='47' cy='17' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
-
       <div className="relative z-10 w-full max-w-full px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header with vintage book cover design */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 sm:mb-8 snap-section"
+          className="mb-6 sm:mb-8"
         >
           <div className={`relative rounded-lg p-4 sm:p-6 lg:p-8 shadow-2xl border-4 transition-all duration-700 ${
             isDarkTheme 
               ? 'bg-gradient-to-r from-rich-brown-800 via-rich-brown-700 to-rich-brown-800 border-rich-brown-600' 
               : 'bg-gradient-to-r from-amber-800 via-amber-700 to-amber-900 border-amber-600'
           }`}>
-            {/* Book spine effect */}
-            <div className={`absolute left-0 top-0 bottom-0 w-2 sm:w-4 rounded-l-lg transition-all duration-700 ${
-              isDarkTheme 
-                ? 'bg-gradient-to-b from-rich-brown-800 to-rich-brown-900' 
-                : 'bg-gradient-to-b from-amber-900 to-amber-800'
-            }`}></div>
-            
-            {/* Decorative corners */}
-            <div className={`absolute top-2 left-4 sm:left-6 w-3 h-3 border-t-2 border-l-2 rounded-tl-lg transition-colors duration-700 ${
-              isDarkTheme ? 'border-warm-gold-500' : 'border-amber-400'
-            }`}></div>
-            <div className={`absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 rounded-tr-lg transition-colors duration-700 ${
-              isDarkTheme ? 'border-warm-gold-500' : 'border-amber-400'
-            }`}></div>
-            <div className={`absolute bottom-2 left-4 sm:left-6 w-3 h-3 border-b-2 border-l-2 rounded-bl-lg transition-colors duration-700 ${
-              isDarkTheme ? 'border-warm-gold-500' : 'border-amber-400'
-            }`}></div>
-            <div className={`absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 rounded-br-lg transition-colors duration-700 ${
-              isDarkTheme ? 'border-warm-gold-500' : 'border-amber-400'
-            }`}></div>
-
-            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors duration-700 ${
-              isDarkTheme ? 'text-rich-brown-100' : 'text-amber-100'
-            }`}>
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <BookOpen className={`h-8 w-8 sm:h-12 sm:w-12 flex-shrink-0 transition-colors duration-700 ${
-                  isDarkTheme ? 'text-warm-gold-500' : 'text-amber-200'
-                }`} />
+            <div className="relative z-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
                 <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold font-serif tracking-wide">Günce Defterim</h1>
-                  <p className={`font-medium text-sm sm:text-base transition-colors duration-700 ${
-                    isDarkTheme ? 'text-rich-brown-300' : 'text-amber-200'
+                  <h1 className={`text-2xl sm:text-3xl font-bold font-serif transition-colors duration-700 ${
+                    isDarkTheme ? 'text-amber-200' : 'text-amber-100'
                   }`}>
-                    Anılarınızı kaydedin, düşüncelerinizi paylaşın
+                    Günce Defteri
+                  </h1>
+                  <p className={`text-sm sm:text-base mt-1 transition-colors duration-700 ${
+                    isDarkTheme ? 'text-amber-300' : 'text-amber-200'
+                  }`}>
+                    {format(today, "d MMMM yyyy, eeee", { locale: tr })}
                   </p>
                 </div>
+                <button
+                  onClick={handleNewEntry}
+                  className={`mt-3 sm:mt-0 flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm sm:text-base shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                    isDarkTheme 
+                      ? 'bg-warm-gold-500 hover:bg-warm-gold-400 text-rich-brown-900' 
+                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
+                  }`}
+                >
+                  <PenTool className="h-4 w-4" />
+                  <span>Yeni Kayıt</span>
+                </button>
               </div>
-              <div className="text-left sm:text-right">
-                <p className={`text-sm font-medium transition-colors duration-700 ${
-                  isDarkTheme ? 'text-amber-300' : 'text-amber-200'
-                }`}>
-                  {format(today, "dd MMMM yyyy", { locale: tr })}
-                </p>
-                <p className={`text-xs transition-colors duration-700 ${
-                  isDarkTheme ? 'text-amber-400' : 'text-amber-300'
-                }`}>
-                  Bugün
-                </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-center">
+                <div className="flex items-center">
+                  <span className={`text-sm sm:text-base transition-colors duration-700 ${isDarkTheme ? 'text-amber-300' : 'text-amber-200'}`}>Toplam Kayıt:</span>
+                  <span className={`font-bold text-lg transition-colors duration-700 ${isDarkTheme ? 'text-amber-200' : 'text-amber-200'}`}>{stats?.total_entries || 0}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className={`text-sm sm:text-base transition-colors duration-700 ${isDarkTheme ? 'text-amber-300' : 'text-amber-200'}`}>Toplam Kelime:</span>
+                  <span className={`font-bold text-lg transition-colors duration-700 ${isDarkTheme ? 'text-amber-200' : 'text-amber-200'}`}>{stats?.total_words || 0}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className={`text-sm sm:text-base transition-colors duration-700 ${isDarkTheme ? 'text-amber-300' : 'text-amber-200'}`}>Favoriler:</span>
+                  <span className={`font-bold text-lg transition-colors duration-700 ${isDarkTheme ? 'text-amber-200' : 'text-amber-200'}`}>{stats?.favorite_entries || 0}</span>
+                </div>
+                 <div className="flex items-center">
+                   <span className={`text-sm sm:text-base transition-colors duration-700 ${isDarkTheme ? 'text-amber-300' : 'text-amber-200'}`}>Yazma Serisi:</span>
+                   <span className={`font-bold text-lg transition-colors duration-700 ${isDarkTheme ? 'text-amber-200' : 'text-amber-200'}`}>-</span>
+                 </div>
               </div>
             </div>
           </div>
         </motion.div>
-
-        {/* Mobile: Calendar first, then content */}
-        {/* Desktop: Content left, calendar right */}
-        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Sidebar - Mobile'da üstte, Desktop'ta sağda */}
-          <div className="order-1 lg:order-2 lg:col-span-1 space-y-6">
-            {/* Mini Calendar */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className={`backdrop-blur-sm rounded-lg shadow-lg border p-4 sm:p-6 transition-all duration-700 snap-section ${
-                isDarkTheme 
-                  ? 'bg-rich-brown-800 border-rich-brown-600' 
-                  : 'bg-white/80 border-amber-200'
-              }`}
-            >
-              <h2 className={`text-xl font-bold mb-4 flex items-center transition-colors duration-700 ${
-                isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
-              }`}>
-                <CalendarIcon className="mr-2 h-5 w-5" />
-                {format(currentMonth, "MMMM yyyy", { locale: tr })}
-              </h2>
-              
-              {/* Calendar Header Controls */}
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={previousMonth}
-                  className={`p-2 rounded-lg transition-all duration-300 ${
-                    isDarkTheme 
-                      ? 'hover:bg-amber-900 text-amber-300 hover:text-amber-200' 
-                      : 'hover:bg-amber-100 text-amber-700 hover:text-amber-900'
-                  }`}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <span className={`font-medium transition-colors duration-700 ${
-                  isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                }`}>
-                  {format(currentMonth, "MMMM yyyy", { locale: tr })}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className={`p-2 rounded-lg transition-all duration-300 ${
-                    isDarkTheme 
-                      ? 'hover:bg-amber-900 text-amber-300 hover:text-amber-200' 
-                      : 'hover:bg-amber-100 text-amber-700 hover:text-amber-900'
-                  }`}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 text-center text-xs sm:text-sm">
-                {/* Week Headers */}
-                {['Pz', 'Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct'].map((day) => (
-                  <div key={day} className={`p-2 font-medium transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-400' : 'text-amber-600'
-                  }`}>
-                    {day}
-                  </div>
-                ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-2"
+          >
+            <div className={`p-4 sm:p-6 rounded-lg shadow-lg h-full transition-all duration-700 ${isDarkTheme ? 'bg-rich-brown-800 border border-rich-brown-700' : 'bg-white/70 border border-amber-200/50'}`}>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2"><Clock className="h-5 w-5" /><span>Son Kayıtlar</span></h2>
                 
-                {/* Calendar Days */}
-                {calendarDays.map((day, index) => {
-                  const hasEntry = hasEntryOnDate(day);
-                  const isCurrentDay = isToday(day);
-                  const isCurrentMonth = isSameMonth(day, currentMonth);
-                  
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "p-2 rounded-lg cursor-pointer transition-all duration-200 relative",
-                        isCurrentDay && (isDarkTheme 
-                          ? "bg-amber-700 text-white font-bold shadow-md" 
-                          : "bg-amber-600 text-white font-bold shadow-md"
-                        ),
-                        !isCurrentDay && isCurrentMonth && (isDarkTheme 
-                          ? "hover:bg-amber-900 text-amber-200" 
-                          : "hover:bg-amber-100 text-amber-900"
-                        ),
-                        !isCurrentMonth && (isDarkTheme 
-                          ? "text-amber-600" 
-                          : "text-amber-400"
-                        ),
-                        hasEntry && !isCurrentDay && (isDarkTheme 
-                          ? "bg-amber-800 text-amber-100 font-medium" 
-                          : "bg-amber-200 text-amber-900 font-medium"
-                        )
-                      )}
-                      onClick={() => setSelectedDate(day)}
-                    >
-                      {format(day, 'd')}
-                      {hasEntry && (
-                        <div className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${
-                          isDarkTheme ? 'bg-amber-500' : 'bg-amber-600'
-                        }`}></div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-
-            {/* Statistics */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className={`backdrop-blur-sm rounded-lg shadow-lg border p-4 sm:p-6 transition-all duration-700 ${
-                isDarkTheme 
-                  ? 'bg-rich-brown-800 border-rich-brown-600' 
-                  : 'bg-white/80 border-amber-200'
-              }`}
-            >
-              <h2 className={`text-xl font-bold mb-4 flex items-center transition-colors duration-700 ${
-                isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
-              }`}>
-                <TrendingUp className="mr-2 h-5 w-5" />
-                İstatistikler
-              </h2>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm sm:text-base transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    Toplam Yazı:
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-200/50 hover:bg-amber-200 dark:bg-rich-brown-700/50 dark:hover:bg-rich-brown-700"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    Sayfa {currentPage} / {totalPages}
                   </span>
-                  <span className={`font-bold text-lg transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    {stats.totalEntries}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm sm:text-base transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    Bu Ay:
-                  </span>
-                  <span className={`font-bold text-lg transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    {stats.thisMonthEntries}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm sm:text-base flex items-center transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    <Heart className="mr-1 h-4 w-4" />
-                    Favori Yazılar:
-                  </span>
-                  <span className={`font-bold text-lg transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    {stats.favoriteEntries}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm sm:text-base transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    Yazma Serisi:
-                  </span>
-                  <span className={`font-bold text-lg transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    {stats.currentStreak} gün
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`text-sm sm:text-base transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-300' : 'text-amber-700'
-                  }`}>
-                    Ort. Kelime:
-                  </span>
-                  <span className={`font-bold text-lg transition-colors duration-700 ${
-                    isDarkTheme ? 'text-amber-200' : 'text-amber-900'
-                  }`}>
-                    {stats.averageWordsPerEntry}
-                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-200/50 hover:bg-amber-200 dark:bg-rich-brown-700/50 dark:hover:bg-rich-brown-700"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
                 </div>
               </div>
-            </motion.div>
-          </div>
 
-          {/* Main Content Area - Mobile'da altta, Desktop'ta solda */}
-          <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
-            {/* New Entry Button */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <button 
-                onClick={handleNewEntry}
-                className={`w-full h-14 sm:h-16 text-base sm:text-lg font-medium shadow-lg border-2 rounded-lg transition-all duration-200 hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center ${
-                  isDarkTheme 
-                    ? 'bg-gradient-to-r from-warm-gold-500 to-rich-brown-700 hover:from-warm-gold-400 hover:to-rich-brown-600 border-warm-gold-500 text-rich-brown-900' 
-                    : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 border-amber-500 text-white'
-                }`}
-              >
-                <PenTool className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
-                Yeni Günce Yazısı Yaz
-              </button>
-            </motion.div>
-
-            {/* Recent Entries */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className={`backdrop-blur-sm rounded-lg shadow-lg border p-4 sm:p-6 transition-all duration-700 ${
-                isDarkTheme 
-                  ? 'bg-rich-brown-800 border-rich-brown-600' 
-                  : 'bg-white/80 border-amber-200'
-              }`}
-            >
-              <h2 className={`text-xl sm:text-2xl font-bold mb-4 flex items-center transition-colors duration-700 ${
-                isDarkTheme ? 'text-rich-brown-100' : 'text-amber-900'
-              }`}>
-                <Clock className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                Son Günceler
-              </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <AnimatePresence>
                   {recentEntries.length > 0 ? (
-                    recentEntries.map((entry, index) => (
+                    recentEntries.map((entry: DiaryEntry, index: number) => (
                       <motion.div
                         key={entry.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                         onClick={() => handleEntryClick(entry.id)}
-                        className={`p-3 sm:p-4 rounded-lg border hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02] ${
-                          isDarkTheme 
-                            ? 'bg-gradient-to-r from-rich-brown-700 to-rich-brown-600 border-rich-brown-500' 
-                            : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
-                        }`}
+                        className={`p-3 sm:p-4 rounded-lg border hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02] ${isDarkTheme ? 'bg-gradient-to-r from-rich-brown-700 to-rich-brown-600 border-rich-brown-500' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'}`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className={`font-semibold truncate transition-colors duration-700 ${
-                                isDarkTheme ? 'text-neutral-100' : 'text-amber-900'
-                              }`}>
-                                {entry.title}
-                              </h3>
+                              <h3 className={`font-semibold truncate transition-colors duration-700 ${isDarkTheme ? 'text-neutral-100' : 'text-amber-900'}`}>{entry.title}</h3>
                               {entry.is_favorite && <Star className="h-4 w-4 text-yellow-500 fill-current flex-shrink-0" />}
                             </div>
-                            <p className={`text-sm mb-2 line-clamp-2 transition-colors duration-700 ${
-                              isDarkTheme ? 'text-neutral-300' : 'text-amber-700'
-                            }`}>
-                              {entry.content}
-                            </p>
+                            <p className={`text-sm mb-2 line-clamp-2 transition-colors duration-700 ${isDarkTheme ? 'text-neutral-300' : 'text-amber-700'}`}>{entry.content}</p>
                             <div className="flex items-center justify-between text-xs">
-                              <p className={`transition-colors duration-700 ${
-                                isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'
-                              }`}>
-                                {(() => {
-                                  try {
-                                    const entryDate = parseEntryDate(entry.entry_date);
-                                    return format(entryDate, "dd MMM yyyy", { locale: tr });
-                                  } catch {
-                                    return "Tarih bilinmiyor";
-                                  }
-                                })()}
+                              <p className={`transition-colors duration-700 ${isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'}`}>
+                                {format(parseEntryDate(entry.entry_date), "dd MMM yyyy", { locale: tr })}
                               </p>
-                              {entry.word_count && (
-                                <span className={`transition-colors duration-700 ${
-                                  isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'
-                                }`}>
-                                  {entry.word_count} kelime
-                                </span>
-                              )}
+                              {entry.word_count && (<span className={`transition-colors duration-700 ${isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'}`}>{entry.word_count} kelime</span>)}
                             </div>
                           </div>
                           <div className="flex flex-col items-center gap-2 ml-3 flex-shrink-0">
@@ -580,55 +324,69 @@ function Dashboard() {
                         </div>
                         {entry.tags && entry.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {entry.tags.slice(0, 3).map((tag, tagIndex) => (
-                              <span 
+                            {entry.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
+                              <span
                                 key={tagIndex}
-                                className={`text-xs px-2 py-1 rounded-full transition-colors duration-700 ${
-                                  isDarkTheme 
-                                    ? 'bg-rich-brown-600 text-warm-gold-400' 
-                                    : 'bg-amber-200 text-amber-800'
-                                }`}
-                              >
-                                {tag}
-                              </span>
+                                className={`text-xs px-2 py-1 rounded-full transition-colors duration-700 ${isDarkTheme ? 'bg-rich-brown-600 text-warm-gold-400' : 'bg-amber-200 text-amber-800'}`}>{tag}</span>
                             ))}
-                            {entry.tags.length > 3 && (
-                              <span className={`text-xs transition-colors duration-700 ${
-                                isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'
-                              }`}>
-                                +{entry.tags.length - 3}
-                              </span>
-                            )}
+                            {entry.tags.length > 3 && (<span className={`text-xs transition-colors duration-700 ${isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'}`}>+{entry.tags.length - 3}</span>)}
                           </div>
                         )}
                       </motion.div>
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <BookOpen className={`h-12 w-12 mx-auto mb-4 transition-colors duration-700 ${
-                        isDarkTheme ? 'text-warm-gold-500' : 'text-amber-400'
-                      }`} />
-                      <p className={`mb-4 transition-colors duration-700 ${
-                        isDarkTheme ? 'text-rich-brown-200' : 'text-amber-600'
-                      }`}>
-                        Henüz günce yazınız yok
-                      </p>
-                      <button 
-                        onClick={handleNewEntry}
-                        className={`px-6 py-2 rounded-lg transition-all duration-300 ${
-                          isDarkTheme 
-                            ? 'bg-warm-gold-500 hover:bg-warm-gold-400 text-rich-brown-900' 
-                            : 'bg-amber-600 hover:bg-amber-700 text-white'
-                        }`}
-                      >
-                        İlk Yazınızı Oluşturun
-                      </button>
+                      <BookOpen className={`h-12 w-12 mx-auto mb-4 transition-colors duration-700 ${isDarkTheme ? 'text-warm-gold-500' : 'text-amber-400'}`} />
+                      <p className={`mb-4 transition-colors duration-700 ${isDarkTheme ? 'text-rich-brown-200' : 'text-amber-600'}`}>Henüz günce yazınız yok</p>
+                      <button onClick={handleNewEntry} className={`px-6 py-2 rounded-lg transition-all duration-300 ${isDarkTheme ? 'bg-warm-gold-500 hover:bg-warm-gold-400 text-rich-brown-900' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}>İlk Yazınızı Oluşturun</button>
                     </div>
                   )}
                 </AnimatePresence>
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-1"
+          >
+            <div className={`p-4 sm:p-6 rounded-lg shadow-lg h-full transition-all duration-700 ${isDarkTheme ? 'bg-rich-brown-800 border border-rich-brown-700' : 'bg-white/70 border border-amber-200/50'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={previousMonth} className="p-2 rounded-full hover:bg-black/10 transition-colors"><ChevronLeft /></button>
+                <h2 className="text-xl font-bold text-center">{format(currentMonth, 'MMMM yyyy', { locale: tr })}</h2>
+                <button onClick={nextMonth} className="p-2 rounded-full hover:bg-black/10 transition-colors"><ChevronRight /></button>
+              </div>
+              <div className="grid grid-cols-7 gap-2 text-center text-xs sm:text-sm">
+                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
+                  <div key={day} className={`font-bold ${isDarkTheme ? 'text-rich-brown-300' : 'text-amber-600'}`}>{day}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1 mt-2">
+                {calendarDays.map((day) => {
+                  const isCurrentMonth = isSameMonth(day, currentMonth);
+                  const isCurrentDay = isToday(day);
+                  const hasEntry = hasEntryOnDate(day);
+                  return (
+                    <div key={day.toString()} className={cn("flex items-center justify-center h-9 sm:h-10 rounded-full text-sm", !isCurrentMonth && "text-gray-400", isCurrentDay && "bg-amber-500 text-white font-bold", hasEntry && "bg-green-500/50 border-green-700")}>
+                      <button
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          const entryId = allEntries?.data?.find((e: DiaryEntry) => isSameDay(parseEntryDate(e.entry_date), day))?.id;
+                          if (entryId) {
+                            handleEntryClick(entryId);
+                          }
+                        }}
+                        className={cn("w-full h-full rounded-full transition-colors", hasEntry && "hover:bg-green-600/50")}
+                      >
+                        {format(day, 'd')}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

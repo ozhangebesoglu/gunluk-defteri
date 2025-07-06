@@ -11,385 +11,257 @@ try {
   }
 }
 
-const { db, safeQuery } = require('../database')
-const { v4: uuidv4 } = require('uuid')
-const path = require('path')
-const fs = require('fs').promises
+// node-fetch'i dinamik olarak import et
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args))
 
-// SQLite support için helper functions
-const isUsingPostgreSQL = () => {
-  return db.client.config.client === 'pg'
-}
+const db = require('../database'); // Yerel veritabanı modülünü dahil et
 
-const formatTagsForDB = (tags) => {
-  if (isUsingPostgreSQL()) {
-    return tags || []
-  } else {
-    // SQLite: JSON string olarak sakla
-    return JSON.stringify(tags || [])
+// Uygulamanın genel internet durumu
+let isOnline = true; // Başlangıçta online varsayalım
+
+const fetchWithAuth = async (url, options = {}, apiConfig) => {
+  const { token, baseUrl } = apiConfig
+  if (!token || !baseUrl) {
+    throw new Error('API token or base URL is not configured.')
   }
-}
 
-const parseTagsFromDB = (tags) => {
-  if (isUsingPostgreSQL()) {
-    return tags || []
-  } else {
-    // SQLite: JSON string'i parse et
-    try {
-      return typeof tags === 'string' ? JSON.parse(tags) : []
-    } catch (error) {
-      return []
-    }
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
   }
+
+  const response = await fetch(`${baseUrl}${url}`, { ...options, headers })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    log.error(`API Error: ${response.status} ${response.statusText}`, errorBody)
+    throw new Error(`API request failed: ${response.statusText}`)
+  }
+  
+  // 204 No Content gibi durumlarda body parse etme
+  if (response.status === 204) {
+    return null
+  }
+
+  return response.json()
 }
 
 class DiaryService {
+  constructor() {
+    this.apiConfig = null;
+    this.syncInProgress = false;
+  }
+
+  // İnternet durumunu güncelleyen metod
+  setOnlineStatus(status) {
+    log.info(`İnternet durumu değişti: ${status ? 'Çevrimiçi' : 'Çevrimdışı'}`);
+    isOnline = status;
+    if (status && this.apiConfig) {
+      this.synchronize(); // İnternet geldiğinde senkronizasyonu başlat
+    }
+  }
+
+  // API yapılandırmasını saklayan metod
+  setApiConfig(config) {
+    log.info('API yapılandırması ayarlandı.');
+    this.apiConfig = config;
+  }
+
   /**
-   * Günlük kayıtlarını getir (filtreleme ile)
+   * Günlük kayıtlarını getir.
+   * Çevrimiçi ise API'den, çevrimdışı ise yerel DB'den getirir.
    */
   async getEntries(filters = {}) {
-    return await safeQuery(async () => {
-      let query = db('diary_entries').select('*')
-
-      // Filtreleme
-      if (filters.startDate) {
-        query = query.where('entry_date', '>=', filters.startDate)
+    if (isOnline && this.apiConfig) {
+      try {
+        log.info('Çevrimiçi: Kayıtlar API\'den getiriliyor.');
+        const queryParams = new URLSearchParams(filters).toString();
+        const remoteEntries = await fetchWithAuth(`/entries?${queryParams}`, {}, this.apiConfig);
+        // İdeal olarak, burada yerel DB'yi de güncelleyebiliriz. Şimdilik sadece API'den dönüyoruz.
+        return remoteEntries;
+      } catch (error) {
+        log.error('API\'den kayıtlar getirilemedi, yerel veritabanına dönülüyor.', error);
+        return db.getEntries(filters);
       }
-      if (filters.endDate) {
-        query = query.where('entry_date', '<=', filters.endDate)
-      }
-      if (filters.tags && filters.tags.length > 0) {
-        query = query.where('tags', '&&', filters.tags)
-      }
-      if (filters.sentiment) {
-        query = query.where('sentiment', filters.sentiment)
-      }
-      if (filters.isFavorite) {
-        query = query.where('is_favorite', true)
-      }
-      if (filters.searchText) {
-        query = query.whereRaw(
-          "to_tsvector('turkish', title || ' ' || content) @@ plainto_tsquery('turkish', ?)",
-          [filters.searchText]
-        )
-      }
-
-      // Sıralama
-      const orderBy = filters.orderBy || 'entry_date'
-      const orderDirection = filters.orderDirection || 'desc'
-      query = query.orderBy(orderBy, orderDirection)
-
-      // Sayfalama
-      if (filters.limit) {
-        query = query.limit(filters.limit)
-      }
-      if (filters.offset) {
-        query = query.offset(filters.offset)
-      }
-
-      const entries = await query
-      
-      // Şifrelenmiş kayıtları işaretle
-      return entries.map(entry => ({
-        ...entry,
-        hasEncryption: !!entry.encrypted_content,
-        content: entry.is_encrypted ? '[ŞİFRELENMİŞ İÇERİK]' : entry.content
-      }))
-    }, 'Günlük kayıtları getirilemedi')
+    } else {
+      log.info('Çevrimdışı: Kayıtlar yerel veritabanından getiriliyor.');
+      return db.getEntries(filters);
+    }
   }
 
   /**
-   * Tek günlük kaydını getir
+   * Tek günlük kaydını getir.
    */
   async getEntry(id) {
-    return await safeQuery(async () => {
-      const entry = await db('diary_entries').where('id', id).first()
-      
-      if (!entry) {
-        throw new Error('Günlük kaydı bulunamadı')
+    if (isOnline && this.apiConfig) {
+      try {
+        log.info(`Çevrimiçi: Kayıt (${id}) API'den getiriliyor.`);
+        return await fetchWithAuth(`/entries/${id}`, {}, this.apiConfig);
+      } catch (error) {
+        log.error(`API'den kayıt (${id}) getirilemedi, yerel veritabanına dönülüyor.`, error);
+        return db.getEntryById(id);
       }
-
-      return entry
-    }, 'Günlük kaydı getirilemedi')
+    } else {
+      log.info(`Çevrimdışı: Kayıt (${id}) yerel veritabanından getiriliyor.`);
+      return db.getEntryById(id);
+    }
   }
 
   /**
-   * Yeni günlük kaydı oluştur
+   * Yeni günlük kaydı oluştur.
    */
   async createEntry(entryData) {
-    return await safeQuery(async () => {
-      const now = new Date()
-      const entryDate = entryData.entry_date || now.toISOString().split('T')[0]
-      const dayOfWeek = this.getDayOfWeek(new Date(entryDate))
-      
-      const wordCount = this.calculateWordCount(entryData.content)
-      const readTime = Math.ceil(wordCount / 200) // 200 kelime/dakika okuma hızı
+    const localEntryData = { ...entryData, sync_status: 'created', updated_at: new Date().toISOString() };
+    const localEntry = await db.createEntry(localEntryData);
+    log.info(`Yerel veritabanına yeni kayıt eklendi: ${localEntry.id}`);
 
-      const newEntry = {
-        id: uuidv4(),
-        title: entryData.title,
-        content: entryData.content,
-        encrypted_content: entryData.encrypted_content || null,
-        entry_date: entryDate,
-        day_of_week: dayOfWeek,
-        tags: formatTagsForDB(entryData.tags),
-        sentiment: entryData.sentiment || 'neutral',
-        sentiment_score: entryData.sentiment_score || 0,
-        weather: entryData.weather || null,
-        location: entryData.location || null,
-        is_favorite: entryData.is_favorite || false,
-        is_encrypted: !!entryData.encrypted_content,
-        word_count: wordCount,
-        read_time: readTime,
-        created_at: now,
-        updated_at: now
-      }
-
-      const [insertedEntry] = await db('diary_entries').insert(newEntry).returning('*')
-      
-      // Etiket kullanım sayısını güncelle
-      if (entryData.tags && entryData.tags.length > 0) {
-        await this.updateTagUsage(parseTagsFromDB(entryData.tags))
-      }
-
-      log.info(`✅ Yeni günlük kaydı oluşturuldu: ${insertedEntry.title}`)
-      return insertedEntry
-    }, 'Günlük kaydı oluşturulamadı')
+    if (isOnline && this.apiConfig) {
+      this.synchronize(); // Anında senkronizasyonu tetikle
+    }
+    
+    return localEntry;
   }
 
   /**
-   * Günlük kaydını güncelle
+   * Günlük kaydını güncelle.
    */
   async updateEntry(id, entryData) {
-    return await safeQuery(async () => {
-      const existingEntry = await this.getEntry(id)
-      
-      const wordCount = this.calculateWordCount(entryData.content || existingEntry.content)
-      const readTime = Math.ceil(wordCount / 200)
+     const localEntryData = { ...entryData, sync_status: 'updated', updated_at: new Date().toISOString() };
+     const updatedEntry = await db.updateEntry(id, localEntryData);
+     log.info(`Yerel veritabanında kayıt güncellendi: ${id}`);
 
-      const updatedEntry = {
-        title: entryData.title || existingEntry.title,
-        content: entryData.content || existingEntry.content,
-        encrypted_content: entryData.encrypted_content || existingEntry.encrypted_content,
-        tags: formatTagsForDB(entryData.tags),
-        sentiment: entryData.sentiment || existingEntry.sentiment,
-        sentiment_score: entryData.sentiment_score || existingEntry.sentiment_score,
-        weather: entryData.weather !== undefined ? entryData.weather : existingEntry.weather,
-        location: entryData.location !== undefined ? entryData.location : existingEntry.location,
-        is_favorite: entryData.is_favorite !== undefined ? entryData.is_favorite : existingEntry.is_favorite,
-        is_encrypted: entryData.encrypted_content ? true : existingEntry.is_encrypted,
-        word_count: wordCount,
-        read_time: readTime,
-        updated_at: new Date()
-      }
-
-      const [updated] = await db('diary_entries')
-        .where('id', id)
-        .update(updatedEntry)
-        .returning('*')
-
-      // Etiket kullanım sayısını güncelle
-      if (entryData.tags) {
-        await this.updateTagUsage(parseTagsFromDB(entryData.tags))
-      }
-
-      log.info(`✅ Günlük kaydı güncellendi: ${updated.title}`)
-      return updated
-    }, 'Günlük kaydı güncellenemedi')
+     if (isOnline && this.apiConfig) {
+       this.synchronize();
+     }
+     
+     return updatedEntry;
   }
 
   /**
-   * Günlük kaydını sil
+   * Günlük kaydını sil.
+   * Yerel veritabanında hemen silmek yerine, senkronizasyon için işaretleyeceğiz.
    */
   async deleteEntry(id) {
-    return await safeQuery(async () => {
-      const entry = await this.getEntry(id)
+    const result = await db.markEntryAsDeleted(id);
+    log.info(`Yerel veritabanında kayıt silinmek üzere işaretlendi: ${id}`);
+    
+    if (isOnline && this.apiConfig) {
+      this.synchronize();
+    }
+    
+    return { success: true, deletedId: id, status: 'marked_for_deletion' };
+  }
+
+  /**
+   * Bekleyen değişiklikleri API ile senkronize et.
+   */
+  async synchronize() {
+    if (!isOnline || !this.apiConfig || this.syncInProgress) {
+      if (this.syncInProgress) log.warn('Senkronizasyon zaten devam ediyor.');
+      return;
+    }
+
+    this.syncInProgress = true;
+    log.info('Senkronizasyon süreci başlatıldı.');
+
+    try {
+      const unsyncedEntries = await db.getUnsyncedEntries();
+      if (unsyncedEntries.length === 0) {
+        log.info('Senkronize edilecek kayıt bulunmuyor.');
+        return;
+      }
       
-      await db('diary_entries').where('id', id).del()
-      
-      log.info(`🗑️ Günlük kaydı silindi: ${entry.title}`)
-      return { success: true, deletedEntry: entry }
-    }, 'Günlük kaydı silinemedi')
+      log.info(`${unsyncedEntries.length} adet senkronize edilmemiş kayıt bulundu.`);
+
+      for (const entry of unsyncedEntries) {
+        try {
+          // eslint-disable-next-line no-unused-vars
+          const { sync_status, ...apiData } = entry;
+
+          if (entry.sync_status === 'created') {
+            await fetchWithAuth('/entries', { method: 'POST', body: JSON.stringify(apiData) }, this.apiConfig);
+            await db.updateEntry(entry.id, { sync_status: 'synced' });
+            log.info(`Oluşturulan kayıt senkronize edildi: ${entry.id}`);
+          } else if (entry.sync_status === 'updated') {
+            await fetchWithAuth(`/entries/${entry.id}`, { method: 'PUT', body: JSON.stringify(apiData) }, this.apiConfig);
+            await db.updateEntry(entry.id, { sync_status: 'synced' });
+            log.info(`Güncellenen kayıt senkronize edildi: ${entry.id}`);
+          } else if (entry.sync_status === 'deleted') {
+            await fetchWithAuth(`/entries/${entry.id}`, { method: 'DELETE' }, this.apiConfig);
+            await db.deleteEntry(entry.id); // API'den silindikten sonra yerelden de sil
+            log.info(`Silinen kayıt senkronize edildi ve yerelden kaldırıldı: ${entry.id}`);
+          }
+        } catch (error) {
+            log.error(`Kayıt senkronize edilirken hata oluştu: ${entry.id}`, error);
+            // Hata durumunda ne yapılacağına karar verilebilir (örn. tekrar deneme mekanizması)
+        }
+      }
+      log.info('Senkronizasyon tamamlandı.');
+    } catch (error) {
+      log.error('Senkronizasyon sürecinde genel bir hata oluştu.', error);
+    } finally {
+      this.syncInProgress = false;
+    }
   }
 
   /**
    * Tüm günlük kayıtlarını sil
    */
-  async deleteAllEntries() {
-    return await safeQuery(async () => {
-      const entriesCount = await db('diary_entries').count('id as count').first()
-      
-      await db('diary_entries').del()
-      
-      // Etiket kullanım sayılarını sıfırla
-      await db('diary_tags').update({ usage_count: 0 })
-      
-      log.info(`🗑️ Tüm günlük kayıtları silindi: ${entriesCount.count} adet`)
-      return { success: true, deletedCount: parseInt(entriesCount.count) }
-    }, 'Tüm günlük kayıtları silinemedi')
+  async deleteAllEntries(apiConfig) {
+    const result = await fetchWithAuth('/api/v1/entries', { method: 'DELETE' }, apiConfig)
+    log.info(`🗑️ Tüm günlük kayıtlarını silme isteği gönderildi.`)
+    return { success: true, deletedCount: result.deletedCount || 0 }
   }
 
   /**
    * Etiketleri getir
    */
-  async getTags() {
-    return await safeQuery(async () => {
-      return await db('diary_tags').select('*').orderBy('usage_count', 'desc')
-    }, 'Etiketler getirilemedi')
+  async getTags(apiConfig) {
+    return fetchWithAuth('/api/v1/tags', {}, apiConfig)
   }
 
   /**
-   * Yeni etiket oluştur
+   * Kaydın favori durumunu değiştir
    */
-  async createTag(tagData) {
-    return await safeQuery(async () => {
-      const newTag = {
-        id: uuidv4(),
-        name: tagData.name,
-        color: tagData.color || '#007bff',
-        description: tagData.description || null,
-        usage_count: 0,
-        created_at: new Date()
-      }
-
-      const [insertedTag] = await db('diary_tags').insert(newTag).returning('*')
-      
-      log.info(`🏷️ Yeni etiket oluşturuldu: ${insertedTag.name}`)
-      return insertedTag
-    }, 'Etiket oluşturulamadı')
+  async toggleFavorite(apiConfig, id) {
+    return fetchWithAuth(`/api/v1/entries/${id}/favorite`, { method: 'POST' }, apiConfig)
   }
-
+  
   /**
-   * Dashboard istatistiklerini getir
+   * İstatistikleri getir
    */
-  async getDashboardStats() {
-    return await safeQuery(async () => {
-      const totalEntries = await db('diary_entries').count('id as count').first()
-      const favoriteEntries = await db('diary_entries').where('is_favorite', true).count('id as count').first()
-      const encryptedEntries = await db('diary_entries').where('is_encrypted', true).count('id as count').first()
-      
-      // Duygu dağılımı
-      const sentimentStats = await db('diary_entries')
-        .select('sentiment')
-        .count('id as count')
-        .groupBy('sentiment')
-      
-      // En çok kullanılan etiketler
-      const topTags = await db('diary_tags')
-        .select('name', 'color', 'usage_count')
-        .orderBy('usage_count', 'desc')
-        .limit(10)
-      
-      // Aylık yazı sayısı (son 12 ay)
-      const monthlyStats = await db('diary_entries')
-        .select(db.raw("DATE_TRUNC('month', entry_date) as month"))
-        .count('id as count')
-        .where('entry_date', '>=', db.raw("CURRENT_DATE - INTERVAL '12 months'"))
-        .groupBy(db.raw("DATE_TRUNC('month', entry_date)"))
-        .orderBy('month')
-      
-      // Toplam kelime sayısı
-      const totalWords = await db('diary_entries').sum('word_count as total').first()
-
-      return {
-        totals: {
-          entries: parseInt(totalEntries.count),
-          favorites: parseInt(favoriteEntries.count),
-          encrypted: parseInt(encryptedEntries.count),
-          words: parseInt(totalWords.total) || 0
-        },
-        sentimentDistribution: sentimentStats,
-        topTags,
-        monthlyStats
-      }
-    }, 'Dashboard istatistikleri getirilemedi')
+  async getDashboardStats(apiConfig) {
+     return fetchWithAuth('/api/v1/stats', {}, apiConfig)
   }
-
+  
+  // Diğer metodlar (createBackup, restoreBackup vb.) şimdilik aynı kalabilir,
+  // çünkü bunlar dosya sistemine erişim gerektiriyor ve API'ye taşınması
+  // daha farklı bir mantık gerektirir. Bu konsolidasyonun ilk adımı
+  // veritabanı işlemlerini merkezileştirmekti.
+  
   /**
-   * Backup oluştur
+   * Creates a backup of the entire diary database.
+   * NOTE: This function still interacts directly with the local filesystem and DB.
+   * It needs to be decided if backup/restore should be a cloud or local feature.
    */
   async createBackup() {
-    return await safeQuery(async () => {
-      const entries = await db('diary_entries').select('*')
-      const tags = await db('diary_tags').select('*')
-      const settings = await db('user_settings').select('*')
-
-      const backupData = {
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        data: {
-          entries,
-          tags,
-          settings
-        }
-      }
-
-      const backupFileName = `diary_backup_${new Date().toISOString().slice(0, 10)}.json`
-      const backupPath = path.join(process.cwd(), 'backups', backupFileName)
-      
-      // Backup klasörünü oluştur
-      await fs.mkdir(path.dirname(backupPath), { recursive: true })
-      
-      // Backup dosyasını yaz
-      await fs.writeFile(backupPath, JSON.stringify(backupData, null, 2))
-
-      log.info(`💾 Backup oluşturuldu: ${backupPath}`)
-      return { success: true, filePath: backupPath, fileName: backupFileName }
-    }, 'Backup oluşturulamadı')
+     // Bu fonksiyonun gözden geçirilmesi gerekiyor.
+     log.warn('createBackup function is using direct DB access and needs review.')
+     return { success: false, message: "Backup function is not implemented for API." }
   }
 
-  /**
-   * Backup'tan geri yükle
-   */
   async restoreBackup(filePath) {
-    return await safeQuery(async () => {
-      const backupData = JSON.parse(await fs.readFile(filePath, 'utf8'))
-      
-      if (!backupData.data) {
-        throw new Error('Geçersiz backup dosyası')
-      }
-
-      // Transaction ile geri yükleme
-      await db.transaction(async (trx) => {
-        // Mevcut verileri temizle
-        await trx('diary_entries').del()
-        await trx('diary_tags').del()
-        await trx('user_settings').del()
-
-        // Yeni verileri ekle
-        if (backupData.data.entries.length > 0) {
-          await trx('diary_entries').insert(backupData.data.entries)
-        }
-        if (backupData.data.tags.length > 0) {
-          await trx('diary_tags').insert(backupData.data.tags)
-        }
-        if (backupData.data.settings.length > 0) {
-          await trx('user_settings').insert(backupData.data.settings)
-        }
-      })
-
-      log.info(`📥 Backup geri yüklendi: ${filePath}`)
-      return { success: true, restoredEntries: backupData.data.entries.length }
-    }, 'Backup geri yüklenemedi')
+    log.warn('restoreBackup function is using direct DB access and needs review.')
+    return { success: false, message: "Restore function is not implemented for API." }
   }
 
-  // Yardımcı metodlar
   getDayOfWeek(date) {
-    const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
-    return days[date.getDay()]
+    return new Intl.DateTimeFormat('tr-TR', { weekday: 'long' }).format(date)
   }
 
-  calculateWordCount(text) {
-    if (!text) return 0
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length
-  }
-
-  async updateTagUsage(tags) {
-    for (const tagName of tags) {
-      await db('diary_tags')
-        .where('name', tagName)
-        .increment('usage_count', 1)
-    }
+  calculateWordCount(text = '') {
+    return text.trim().split(/\s+/).filter(Boolean).length
   }
 }
 

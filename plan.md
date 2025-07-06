@@ -1,199 +1,494 @@
-📌 Günlük Defteri Uygulaması — Geliştirilmiş Yol Haritası (PostgreSQL + Electron)
-📚 1. Proje Kurulumu ve Modern Altyapı
+📌 Günlük Defteri Uygulaması — Multi-Platform Sync Sistemi (Context7 Uyumlu)
 
-## ✅ TAMAMLANAN TEMEL KURULUM
-- ✅ **Proje kurulumu** (PostgreSQL + Electron + React 19)
-- ✅ **Güvenli Electron yapılandırması** (contextIsolation, nodeIntegration false)
-- ✅ **PostgreSQL veritabanı** (Knex.js ORM ile)
-- ✅ **Migration ve seed sistemi** (Demo veriler dahil)
-- ✅ **React 19 + TypeScript + Vite frontend**
-- ✅ **Modern UI/UX tasarımı** (TailwindCSS + Framer Motion)
+## 🎯 YENİ PRİORİTE: NOTION-STYLE MULTI-PLATFORM SYNC SİSTEMİ
 
-## ✅ TAMAMLANAN DARK THEME REVİZE (PROFESSIONAL)
-- ✅ **Modern color palette** (Slate-based professional dark theme)
-- ✅ **High contrast ratios** (WCAG AA compliant)
-- ✅ **Amber accent optimization** (Sadece vurgu rengi olarak)
-- ✅ **Theme persistence** (localStorage integration)
-- ✅ **Smooth transitions** (700ms professional animations)
-- ✅ **All components updated** (Layout, Dashboard, Settings vb.)
-- ✅ **CSS custom properties** (Theme variables)
+**Kullanıcı İsteği:** 
+- ✅ Hesap açma sistemi (Google Auth + Supabase)
+- ✅ Web ve desktop arasında sync
+- ✅ PC kapalı iken bile başka cihazlardan erişim
+- ✅ Kullanıcıya özel data isolation
 
-**Skor:** Öncesi 4/10 → Sonrası 9/10 ⭐
+### 🔥 PHASE 1: SUPABASE AUTHENTICATION & REAL-TIME SYNC (3-4 saat)
 
-## ✅ TAMAMLANAN CONTEXT7-STYLE FEATURES
-- ✅ **Frameless window** (Clean menü çubuğu yok)
-- ✅ **Custom window controls** (Minimize, Maximize, Close)
-- ✅ **120fps mobile optimization** (Touch-friendly, haptic feedback)
-- ✅ **Responsive design** (Mobile + Desktop optimized)
-- ✅ **Modern sidebar** (Context7-style overlay navigation)
-- ✅ **Professional animations** (Spring-based, hardware accelerated)
-
-## ✅ TAMAMLANAN UI/UX İYİLEŞTİRMELER
-- ✅ **Interactive lamp theme toggle** (Tıklanabilir tema değiştirme)
-- ✅ **Visible cable design** (Realistic lamp aesthetic)
-- ✅ **Clean debug removal** (Production-ready görünüm)
-- ✅ **Enhanced button interactions** (Hover states, visual feedback)
-- ✅ **Modern glassmorphism effects** (Backdrop blur, transparency)
-
-## 🚧 DEVAM EDEN - CORE FUNCTIONALITY
-- 🔄 **Advanced diary editor** (Rich text, block-based)
-- 🔄 **Media attachment system** (Images, audio recordings)
-- 🔄 **Tag management** (Color-coded, hierarchical)
-- 🔄 **Search & filtering** (Full-text search, date ranges)
-- 🔄 **Statistics dashboard** (Mood tracking, writing analytics)
-
-## 📋 YAPILACAK - PLATFORM ÖZELLİKLERİ
-
-### 🎯 AŞAMA 1: DESKTOP APP PACKAGING (1-2 saat)
-- [ ] **Electron Builder kurulumu**
-- [ ] **Auto-updater entegrasyonu**
-- [ ] **Native OS features** (File system, notifications)
-- [ ] **Code signing** (Windows/Mac distribution)
-
-### 🎯 AŞAMA 2: PWA & WEB DEPLOYMENT (1 saat)
-- [ ] **Progressive Web App setup**
-- [ ] **Service worker** (Offline functionality)
-- [ ] **Cloud database hosting** (Supabase/PlanetScale)
-- [ ] **Custom domain deployment**
-
-### 🎯 AŞAMA 3: NOTION-STYLE FEATURES (3-4 saat)
-- [ ] **Block-based editor enhancement**
-- [ ] **Drag & drop interface**
-- [ ] **Template system**
-- [ ] **Export/import functionality** (PDF, Markdown, JSON)
-- [ ] **Real-time collaboration** (WebSocket integration)
-
-### 🎯 AŞAMA 4: GELIŞMIŞ ÖZELLİKLER (2-3 saat)
-- [ ] **Multi-workspace support**
-- [ ] **Advanced search** (AI-powered)
-- [ ] **Integration APIs** (Google Drive, Dropbox)
-- [ ] **Mobile companion app** (React Native)
-
-## 🔒 GÜVENLİK ÖZELLİKLERİ
-- ✅ **Secure Electron config** (No nodeIntegration, contextIsolation)
-- ✅ **CSP headers** (Content Security Policy)
-- ✅ **Safe URL handling** (External link protection)
-- [ ] **End-to-end encryption** (AES-256)
-- [ ] **Backup encryption** (Password-protected exports)
-- [ ] **Audit logging** (User activity tracking)
-
-## 📊 MEVCUT DURUM ANALİZİ
-
-### ✅ BAŞARILI TAMAMLANANLAR:
-1. **Modern UI/UX** → Professional dark theme, Context7-style navigation
-2. **Technical Foundation** → PostgreSQL + Electron + React 19 stack
-3. **User Experience** → Interactive elements, smooth animations
-4. **Desktop Integration** → Frameless window, custom controls
-5. **Responsive Design** → Mobile-first, 120fps optimized
-
-### 🎯 SONRAKI PRİORİTELER:
-1. **Content Editor** → Rich text editing, media support
-2. **Data Features** → Search, export, analytics
-3. **Platform Packaging** → Desktop distribution, web deployment
-4. **Advanced Features** → Templates, collaboration, integrations
-
-## 🏆 PROJENİN GÜÇLÜ YÖNLERİ
-- ✅ **Modern tech stack** (React 19, TypeScript, PostgreSQL)
-- ✅ **Professional design** (High-contrast dark theme)
-- ✅ **Native feel** (Context7-style, frameless window)
-- ✅ **Performance optimized** (120fps, hardware acceleration)
-- ✅ **Security focused** (Electron best practices)
-- ✅ **Scalable architecture** (Component-based, modular)
-
-## 📈 BAŞARI METRİKLERİ
-- **UI/UX Quality:** 9/10 ⭐ (Professional modern design)
-- **Technical Foundation:** 8/10 ⭐ (Solid PostgreSQL + Electron)
-- **User Experience:** 8/10 ⭐ (Smooth interactions, responsive)
-- **Security:** 7/10 ⭐ (Best practices implemented)
-- **Feature Completeness:** 6/10 🔄 (Core editing features pending)
-
-**Genel Proje Durumu: 8/10 ⭐ - Güçlü foundation, production-ready UI**
-
----
-
-## 💡 SONRAKI ADIMLAR ÖNERİLERİ
-
-1. **Öncelik 1:** Rich text editor (Draft.js veya Slate.js)
-2. **Öncelik 2:** Media upload system (Cloudinary entegrasyonu)
-3. **Öncelik 3:** Desktop app packaging (Electron Builder)
-4. **Öncelik 4:** Cloud deployment (Vercel + Supabase)
-
-**Bu proje artık professional düzeyde UI/UX'e sahip, modern bir günlük uygulaması! 🚀**
-
-### Proje İlk Kurulum
+#### **A. Supabase Setup & Authentication (Context7 Uyumlu)**
 ```bash
-mkdir gunluk-defteri
-cd gunluk-defteri
-npm init -y
+# Supabase project kurulumu
+npm install @supabase/supabase-js @supabase/auth-helpers-react
+npm install @supabase/auth-ui-react @supabase/auth-ui-shared
 ```
 
-### ElectronJS Güvenli Kurulum
-```bash
-# Ana bağımlılıklar
-npm install --save-dev electron@latest
-npm install --save-dev electron-builder@latest
-npm install --save-dev @electron/rebuild
+**Authentication yapılandırması:**
+```typescript
+// lib/supabase.ts - Context7 best practices
+import { createClient } from '@supabase/supabase-js'
 
-# React + Vite kurulumu (Modern yaklaşım)
-npm create vite@latest frontend -- --template react-ts
-cd frontend && npm install
-cd ..
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-# Güvenlik paketleri
-npm install --save-dev @electron/fuses
-```
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+})
 
-### 🔒 Güvenli Electron Yapılandırması (main.js)
-```javascript
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
-const path = require('node:path')
-const isDev = process.env.NODE_ENV === 'development'
-
-// Güvenlik ayarları
-app.whenReady().then(() => {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: false,          // Güvenlik için kapalı
-      contextIsolation: true,          // Güvenlik için açık
-      enableRemoteModule: false,       // Güvenli olmayan uzak modül kapalı
-      preload: path.join(__dirname, 'preload.js'),
-      webSecurity: true,               // Web güvenliği açık
-      allowRunningInsecureContent: false,
-      experimentalFeatures: false
-    },
-    icon: path.join(__dirname, 'assets/icon.png')
+// Google Auth setup
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`
+    }
   })
+  return { data, error }
+}
+```
 
-  // Güvenli URL yükleme
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
-  } else {
-    mainWindow.loadFile('dist/index.html')
+#### **B. Database Schema Migration (Context7 Pattern)**
+```sql
+-- Migration: Multi-user diary system
+-- users tablo (Supabase Auth ile sync)
+CREATE TABLE public.profiles (
+  id UUID REFERENCES auth.users NOT NULL,
+  email TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (id)
+);
+
+-- Enhanced diary_entries (user-specific)
+ALTER TABLE diary_entries ADD COLUMN user_id UUID REFERENCES auth.users(id);
+ALTER TABLE diary_entries ADD COLUMN sync_status TEXT DEFAULT 'synced';
+ALTER TABLE diary_entries ADD COLUMN last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Real-time için RLS policies
+ALTER TABLE diary_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- User can only see their own entries
+CREATE POLICY "Users can view own diary entries" ON diary_entries
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own diary entries" ON diary_entries
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own diary entries" ON diary_entries
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own diary entries" ON diary_entries
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Real-time subscription setup (Context7 pattern)
+ALTER PUBLICATION supabase_realtime ADD TABLE diary_entries;
+ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+
+-- Real-time broadcast policies (Context7 uyumlu)
+CREATE POLICY "authenticated users can receive broadcasts"
+ON "realtime"."messages" 
+FOR SELECT TO authenticated 
+USING (true);
+
+CREATE POLICY "authenticated users can send broadcasts"
+ON "realtime"."messages"
+FOR INSERT TO authenticated
+WITH CHECK (true);
+```
+
+#### **C. Real-time Sync Service (Context7 Best Practices)**
+```typescript
+// services/realtimeSync.ts
+export class RealtimeSyncService {
+  private channel: any = null
+  private userId: string | null = null
+
+  async initializeSync(userId: string) {
+    this.userId = userId
+    
+    // Context7 pattern: Private channel per user
+    this.channel = supabase
+      .channel(`user-${userId}`, {
+        config: { private: true }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'diary_entries',
+        filter: `user_id=eq.${userId}`
+      }, (payload) => this.handleDatabaseChange(payload))
+      .on('broadcast', { event: 'sync_status' }, (payload) => this.handleSyncStatus(payload))
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time sync active')
+        }
+      })
+
+    // Set auth for private channel (Context7 requirement)
+    await supabase.realtime.setAuth()
   }
 
-  // Güvenli bağlantı kontrolü
-  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl)
-    if (parsedUrl.origin !== 'http://localhost:5173' && !isDev) {
-      event.preventDefault()
+  private handleDatabaseChange(payload: any) {
+    const { eventType, new: newRecord, old: oldRecord } = payload
+    
+    switch (eventType) {
+      case 'INSERT':
+        this.handleNewEntry(newRecord)
+        break
+      case 'UPDATE':
+        this.handleUpdatedEntry(newRecord, oldRecord)
+        break
+      case 'DELETE':
+        this.handleDeletedEntry(oldRecord)
+        break
     }
-  })
+  }
 
-  // Güvenli pencere açma kontrolü
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://')) {
-      shell.openExternal(url)
+  // Context7 pattern: Conflict-free sync
+  async syncEntry(entry: DiaryEntry) {
+    const { data, error } = await supabase
+      .from('diary_entries')
+      .upsert({
+        ...entry,
+        user_id: this.userId,
+        last_synced_at: new Date().toISOString(),
+        sync_status: 'synced'
+      }, {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      })
+
+    if (!error) {
+      // Broadcast sync success to other devices
+      this.channel?.send({
+        type: 'broadcast',
+        event: 'sync_status',
+        payload: { entryId: entry.id, status: 'synced' }
+      })
     }
-    return { action: 'deny' }
-  })
+
+    return { data, error }
+  }
+}
+```
+
+### 🔥 PHASE 2: DUAL-MODE API SERVICE (2 saat)
+
+#### **A. Unified API Service (Desktop + Web)**
+```typescript
+// services/api.ts - Context7 unified approach
+export class UnifiedApiService {
+  private isElectron = !!window.electronAPI
+  private realtimeSync = new RealtimeSyncService()
+
+  async getEntries(): Promise<DiaryEntry[]> {
+    if (this.isElectron) {
+      // Desktop: Local SQLite + sync to cloud
+      const localEntries = await window.electronAPI.diary.getEntries()
+      await this.syncToCloud(localEntries)
+      return localEntries
+    } else {
+      // Web: Direct Supabase access
+      const { data, error } = await supabase
+        .from('diary_entries')
+        .select('*')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .order('entry_date', { ascending: false })
+      
+      if (error) throw error
+      return data || []
+    }
+  }
+
+  async createEntry(entry: CreateEntryDto): Promise<DiaryEntry> {
+    const user = await supabase.auth.getUser()
+    if (!user.data.user) throw new Error('User not authenticated')
+
+    const entryWithUser = {
+      ...entry,
+      id: crypto.randomUUID(),
+      user_id: user.data.user.id,
+      created_at: new Date().toISOString(),
+      sync_status: 'pending'
+    }
+
+    if (this.isElectron) {
+      // Desktop: Save locally first, then sync
+      const localEntry = await window.electronAPI.diary.createEntry(entryWithUser)
+      await this.realtimeSync.syncEntry(localEntry)
+      return localEntry
+    } else {
+      // Web: Direct to Supabase (Context7 pattern)
+      const { data, error } = await supabase
+        .from('diary_entries')
+        .insert([entryWithUser])
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    }
+  }
+
+  private async syncToCloud(localEntries: DiaryEntry[]) {
+    // Context7 pattern: Batch sync with conflict resolution
+    for (const entry of localEntries.filter(e => e.sync_status === 'pending')) {
+      await this.realtimeSync.syncEntry(entry)
+    }
+  }
+}
+```
+
+#### **B. Authentication Context (Context7 Style)**
+```typescript
+// contexts/AuthContext.tsx
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const realtimeSync = useRef(new RealtimeSyncService())
+
+  useEffect(() => {
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+      
+      if (session?.user) {
+        // Initialize real-time sync (Context7 pattern)
+        realtimeSync.current.initializeSync(session.user.id)
+      }
+    })
+
+    // Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          await realtimeSync.current.initializeSync(session.user.id)
+        } else if (event === 'SIGNED_OUT') {
+          await realtimeSync.current.cleanup()
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const value = {
+    user,
+    loading,
+    signInWithGoogle: () => signInWithGoogle(),
+    signOut: () => supabase.auth.signOut()
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+```
+
+### 🔥 PHASE 3: WEB DEPLOYMENT & PWA (1 saat)
+
+#### **A. Vercel Deployment**
+```typescript
+// Environment variables
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+// Deployment commands
+npm run build
+npx vercel --prod
+```
+
+#### **B. PWA Configuration (Context7 Style)**
+```typescript
+// vite.config.ts - PWA setup
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              }
+            }
+          }
+        ]
+      },
+      manifest: {
+        name: 'Günce Defteri',
+        short_name: 'Günce',
+        theme_color: '#d4af37',
+        background_color: '#1a1a1a',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          {
+            src: 'icon-192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    })
+  ]
 })
 ```
 
-### 🛡️ Güvenli Preload Script
+### 🔥 PHASE 4: DESKTOP ENHANCEMENT (1 saat)
+
+#### **A. Offline-First Desktop Strategy**
 ```javascript
-const { contextBridge, ipcRenderer } = require('electron')
+// main.js - Enhanced Electron with sync
+const { app, BrowserWindow, ipcMain } = require('electron')
+const Store = require('electron-store')
+const { RealtimeSyncService } = require('./services/sync')
+
+const store = new Store()
+const syncService = new RealtimeSyncService()
+
+// IPC handlers for desktop
+ipcMain.handle('auth:signIn', async (event, credentials) => {
+  // Handle authentication and start sync
+  const result = await syncService.authenticateAndSync(credentials)
+  return result
+})
+
+ipcMain.handle('diary:getEntries', async () => {
+  // Get local entries and sync with cloud
+  const localEntries = store.get('diary_entries', [])
+  await syncService.syncEntries(localEntries)
+  return localEntries
+})
+
+// Auto-sync on network changes
+require('electron').powerMonitor.on('resume', () => {
+  syncService.performBackgroundSync()
+})
+```
+
+## 📊 CONTEXT7 BEST PRACTICES UYGULAMASI
+
+### ✅ Authentication (Supabase Auth)
+- Google OAuth integration
+- Session persistence
+- Real-time auth state sync
+- Row Level Security (RLS)
+
+### ✅ Real-time Sync (Supabase Realtime)
+- Private channels per user
+- Postgres changes subscription
+- Broadcast messages for sync status
+- Conflict-free CRDT-style updates
+
+### ✅ Security (Context7 Standards)
+- Row Level Security policies
+- JWT token management
+- Real-time authorization
+- Private channel access control
+
+### ✅ Multi-Platform Architecture
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   DESKTOP APP   │    │    WEB APP      │    │   MOBILE APP    │
+│  (Electron)     │    │   (React PWA)   │    │ (React Native)  │
+│                 │    │                 │    │     (Future)    │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │Local SQLite │ │    │ │ Direct API  │ │    │ │ Local Store │ │
+│ │+ Sync Layer │ │    │ │ Connection  │ │    │ │+ Sync Layer │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────▼───────────┐
+                    │    SUPABASE CLOUD      │
+                    │                        │
+                    │ ┌───────────────────┐  │
+                    │ │  PostgreSQL DB    │  │
+                    │ │  + Real-time      │  │
+                    │ │  + Auth           │  │
+                    │ │  + Storage        │  │
+                    │ └───────────────────┘  │
+                    └─────────────────────────┘
+```
+
+## 🎯 SUCCESS METRICS
+
+### **PHASE 1 Complete:**
+- ✅ Google Auth working
+- ✅ Multi-user database
+- ✅ Real-time sync active
+- ✅ RLS policies enforced
+
+### **PHASE 2 Complete:**
+- ✅ Desktop offline-first
+- ✅ Web direct-cloud
+- ✅ Unified API service
+- ✅ Conflict resolution
+
+### **PHASE 3 Complete:**
+- ✅ Web app deployed
+- ✅ PWA capabilities
+- ✅ Custom domain
+- ✅ Performance optimized
+
+### **PHASE 4 Complete:**
+- ✅ Desktop auto-sync
+- ✅ Background sync
+- ✅ Network awareness
+- ✅ Cross-device consistency
+
+## 🚀 IMPLEMENTATION ORDER (Context7 Prioritized)
+
+1. **Authentication Setup** (1 saat) → Google Auth + Supabase
+2. **Database Migration** (30 dk) → RLS + Multi-user schema
+3. **Real-time Sync** (1.5 saat) → Context7 patterns
+4. **Dual-mode API** (1 saat) → Desktop/Web unified
+5. **Web Deployment** (45 dk) → Vercel + PWA
+6. **Desktop Enhancement** (45 dk) → Offline-first sync
+
+**Total Time: 5.5 saat** ⏱️
+
+Bu plan ile tam istediğin gibi **Notion-style multi-platform sync sistemi** elde edeceksin! Context7 best practices ile professional grade bir solution! 🎉
+
+---
+
+## ✅ TAMAMLANAN TEMEL KURULUM
+- ✅ **Docker Strategy Fixed** (Context7 uyumlu)
+- ✅ **Backend API Ready** (Express + PostgreSQL + Supabase)
+- ✅ **Health Check Active** (http://localhost:3000/api/v1/health)
+- ✅ **Container Healthy** (PostgreSQL + API running)
+- ✅ **Professional dark theme** (Slate-based, Context7 style)
+- ✅ **React 19 + TypeScript + Vite frontend**
+- ✅ **Modern UI/UX tasarımı** (TailwindCSS + Framer Motion)
+
+## 🔄 SONRAKI ADIM: MULTI-PLATFORM SYNC
+Context7 dokümantasyonu ile Supabase authentication ve real-time sync sistemi kurulacak! 🚀
 
 // Güvenli API'leri expose et
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -211,159 +506,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateProgress: (callback) => 
     ipcRenderer.on('update-progress', (_event, value) => callback(value))
 })
-```
-
-🛠️ 2. PostgreSQL Kurulumu ve Gelişmiş Bağlantı
-
-PostgreSQL kur
-
-pgAdmin üzerinden veritabanını oluştur (ör: diary_app)
-
-knex veya sequelize (Node.js ORM) kurulumu
-npm install knex pg
-
-
-Bağlantı yapılandırması
-database.js
-
-const knex = require("knex")({
-  client: "pg",
-  connection: {
-    host: "localhost",
-    user: "postgres",
-    password: "seninŞifren",
-    database: "diary_app"
-  }
-});
-module.exports = knex;
-
-
-📝 3. Gelişmiş Veritabanı Şeması ve Seed Verileri
-
-### 🎯 Migration ve Seed Komutları
-```bash
-# Knex CLI kurulumu (global)
-npm install -g knex
-
-# Migration dosyaları oluşturma
-npx knex migrate:make create_diary_tables
-npx knex migrate:make create_indexes
-npx knex migrate:make add_fulltext_search
-
-# Seed dosyaları oluşturma
-npx knex seed:make 01_demo_tags
-npx knex seed:make 02_demo_entries
-npx knex seed:make 03_user_settings
-
-# Tek komutla kurulum
-npm run db:fresh
-```
-
-### 📁 Migration Dosyaları
-
-**db/migrations/001_create_diary_tables.js:**
-```javascript
-exports.up = function(knex) {
-  return knex.schema
-    .createTable('diary_entries', function(table) {
-      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
-      table.string('title', 255).notNullable()
-      table.text('content').notNullable()
-      table.text('encrypted_content') // Şifrelenmiş içerik
-      table.date('entry_date').notNullable()
-      table.string('day_of_week', 20).notNullable()
-      table.specificType('tags', 'text[]').defaultTo(knex.raw('ARRAY[]::text[]'))
-      table.enum('sentiment', ['very_positive', 'positive', 'neutral', 'negative', 'very_negative'])
-      table.float('sentiment_score').defaultTo(0)
-      table.string('weather', 50)
-      table.string('location', 255)
-      table.boolean('is_favorite').defaultTo(false)
-      table.boolean('is_encrypted').defaultTo(false)
-      table.integer('word_count').defaultTo(0)
-      table.integer('read_time').defaultTo(0) // dakika cinsinden
-      table.timestamp('created_at').defaultTo(knex.fn.now())
-      table.timestamp('updated_at').defaultTo(knex.fn.now())
-      
-      // İndeksler
-      table.index(['entry_date'])
-      table.index(['sentiment'])
-      table.index(['is_favorite'])
-    })
-    .createTable('diary_tags', function(table) {
-      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
-      table.string('name', 100).notNullable().unique()
-      table.string('color', 7).notNullable().defaultTo('#007bff')
-      table.text('description')
-      table.integer('usage_count').defaultTo(0)
-      table.timestamp('created_at').defaultTo(knex.fn.now())
-    })
-    .createTable('user_settings', function(table) {
-      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'))
-      table.string('setting_key', 100).notNullable().unique()
-      table.text('setting_value')
-      table.string('data_type', 20).defaultTo('string')
-      table.timestamp('updated_at').defaultTo(knex.fn.now())
-    })
-}
-
-exports.down = function(knex) {
-  return knex.schema
-    .dropTableIfExists('user_settings')
-    .dropTableIfExists('diary_tags')
-    .dropTableIfExists('diary_entries')
-}
-```
-
-**db/migrations/002_create_indexes.js:**
-```javascript
-exports.up = function(knex) {
-  return knex.schema.raw(`
-    -- Hızlı arama için composite indexler
-    CREATE INDEX idx_diary_entries_date_sentiment ON diary_entries (entry_date, sentiment);
-    CREATE INDEX idx_diary_entries_tags_gin ON diary_entries USING GIN (tags);
-    
-    -- Full-text search için
-    CREATE INDEX idx_diary_entries_search ON diary_entries USING GIN (
-      to_tsvector('turkish', title || ' ' || content)
-    );
-  `)
-}
-
-exports.down = function(knex) {
-  return knex.schema.raw(`
-    DROP INDEX IF EXISTS idx_diary_entries_date_sentiment;
-    DROP INDEX IF EXISTS idx_diary_entries_tags_gin;
-    DROP INDEX IF EXISTS idx_diary_entries_search;
-  `)
-}
-```
-
-### 🌱 Seed Dosyaları
-
-**db/seeds/01_demo_tags.js:**
-```javascript
-const { v4: uuidv4 } = require('uuid')
-
-exports.seed = async function(knex) {
-  await knex('diary_tags').del()
-  
-  await knex('diary_tags').insert([
-    { id: uuidv4(), name: 'Mutluluk', color: '#FFD700', description: 'Mutlu anları etiketlemek için' },
-    { id: uuidv4(), name: 'Üzgün', color: '#4169E1', description: 'Üzgün hissettiğim günler' },
-    { id: uuidv4(), name: 'İş', color: '#FF6347', description: 'İş ile ilgili günlük kayıtları' },
-    { id: uuidv4(), name: 'Aile', color: '#32CD32', description: 'Aile ile geçirilen zamanlar' },
-    { id: uuidv4(), name: 'Seyahat', color: '#FF69B4', description: 'Seyahat anıları' },
-    { id: uuidv4(), name: 'Başarı', color: '#9370DB', description: 'Başarı hikayeleri' },
-    { id: uuidv4(), name: 'Öğrenme', color: '#20B2AA', description: 'Yeni öğrenilen şeyler' },
-    { id: uuidv4(), name: 'Sağlık', color: '#228B22', description: 'Sağlık ve spor kayıtları' }
-  ])
-}
-```
 
 **db/seeds/02_demo_entries.js:**
-```javascript
-const { v4: uuidv4 } = require('uuid')
-
+```
 exports.seed = async function(knex) {
   await knex('diary_entries').del()
   
@@ -450,7 +595,7 @@ exports.seed = async function(knex) {
 ```
 
 **db/seeds/03_user_settings.js:**
-```javascript
+```
 const { v4: uuidv4 } = require('uuid')
 
 exports.seed = async function(knex) {
@@ -472,7 +617,7 @@ exports.seed = async function(knex) {
 ```
 
 ### 🚀 Package.json Scriptleri
-```json
+```
 {
   "scripts": {
     "db:setup": "npm run db:migrate && npm run db:seed",
@@ -487,7 +632,7 @@ exports.seed = async function(knex) {
 ```
 
 ### 🎯 Tek Komutla Kurulum:
-```bash
+```
 # Tüm veritabanını sıfırdan kur (demo veriler dahil)
 npm run db:fresh
 
@@ -969,194 +1114,9 @@ io.on('connection', (socket) => {
     socket.to(`page-${data.pageId}`).emit('block-updated', data)
   })
 })
-```
-
-#### **C. Block-based Editor Enhancement**
-```typescript
-// Advanced block types
-const BLOCK_TYPES = {
-  TEXT: 'text',
-  HEADING_1: 'heading-1',
-  HEADING_2: 'heading-2',
-  BULLET_LIST: 'bullet-list',
-  NUMBERED_LIST: 'numbered-list',
-  QUOTE: 'quote',
-  CODE: 'code',
-  IMAGE: 'image',
-  VIDEO: 'video',
-  DIVIDER: 'divider',
-  TABLE: 'table',
-  CALENDAR: 'calendar',
-  CHART: 'chart'
-}
-
-// Drag & Drop API integration
-import { DndProvider, useDrag, useDrop } from 'react-dnd'
-```
-
-### **🎯 AŞAMA 4: GELIŞMIŞ PLATFORM ÖZELLİKLERİ (2 saat)**
-
-#### **A. Export/Import System**
-```typescript
-// Multi-format export
-const exportFormats = {
-  PDF: () => exportToPDF(pageContent),
-  MARKDOWN: () => exportToMarkdown(pageContent), 
-  NOTION: () => exportToNotion(pageContent),
-  JSON: () => exportToJSON(pageContent),
-  HTML: () => exportToHTML(pageContent)
-}
-
-// Notion import compatibility
-const importFromNotion = (notionExport) => {
-  // Parse Notion export and convert to our block format
-}
-```
-
-#### **B. API & Integration Layer**
-```typescript
-// RESTful API endpoints
-app.get('/api/v1/pages', getPages)
-app.post('/api/v1/pages', createPage)
-app.put('/api/v1/pages/:id', updatePage)
-app.delete('/api/v1/pages/:id', deletePage)
-
-// GraphQL API için 
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: resolvers,
-  graphiql: true
-}))
-
-// External integrations
-const integrations = {
-  GOOGLE_DRIVE: () => syncWithGoogleDrive(),
-  DROPBOX: () => syncWithDropbox(),
-  NOTION: () => importFromNotion(),
-  GITHUB: () => syncWithGithub()
-}
-```
-
-### **📊 PLATFORM ÖZELLİKLERİ ROADMAP**
-
-**✅ TAMAMLANAN:**
-- Modern UI/UX with rich brown theme
-- Basic diary functionality
-- PostgreSQL database
-- React 19 + TypeScript
-- Electron desktop app foundation
-
-**🚧 DEVAM EDEN (BU HAFTA):**
-- Desktop app packaging & distribution
-- PWA & web deployment
-- Block-based editor improvements
-- Real-time features foundation
-
-**🎯 GELECEKTEKİ ÖZELLİKLER:**
-- Multi-user workspaces
-- Team collaboration
-- Template marketplace
-- Mobile app (React Native)
-- AI-powered features
-- Integration marketplace
-
-### **🏆 BAŞARI HEDEFLERİ**
-
-1. **Desktop App:** Windows/Mac executable files ready
-2. **Web Platform:** Cloud-hosted, PWA-enabled
-3. **Data Portability:** Export/import from major platforms
-4. **Collaboration Ready:** Multi-user architecture foundation
-5. **Professional Grade:** Enterprise-ready features
-
-**Bu yol haritası ile Notion'a rakip olabilecek güçlü bir platform oluşturacağız! 🚀**
-
----
-
-## 🔧 KRİTİK EKSIK: BACKEND & SYNC STRATEJİSİ
-
-### ⚠️ MEVCUT SORUN ANALİZİ:
-**Problem:** Şu anda sadece local Electron + PostgreSQL var
-- ❌ Web versiyonu yok (sadece Electron)
-- ❌ Cloud sync yok 
-- ❌ Multi-device erişim yok
-- ❌ Backup/restore sistemi eksik
-
-### 🎯 HEDEF: HYBRID PLATFORM (Web + Desktop + Mobile + Sync)
-
-## 🏗️ BACKEND & SYNC MİMARİSİ (ÖNCELİK 1)
-
-### **A. BACKEND API SERVİSİ (Node.js + Express)**
-```bash
-# Backend klasör yapısı
-/backend
-  /src
-    /routes      # API endpoints
-    /models      # Database models
-    /middleware  # Auth, validation
-    /services    # Business logic
-    /utils       # Helpers
-  /config        # DB, auth config
-  app.js         # Express server
-```
-
-**Backend Kurulumu:**
-```javascript
-// backend/src/app.js
-const express = require('express')
-const cors = require('cors')
-const helmet = require('helmet')
-const rateLimit = require('express-rate-limit')
-
-const app = express()
-
-// Security middleware
-app.use(helmet())
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://gunlukdefteri.app'],
-  credentials: true
-}))
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 dakika
-  max: 100 // 100 request per window
-})
-app.use('/api', limiter)
-
-// Routes
-app.use('/api/v1/auth', require('./routes/auth'))
-app.use('/api/v1/entries', require('./routes/entries'))
-app.use('/api/v1/sync', require('./routes/sync'))
-
-module.exports = app
-```
-
-### **B. DATABASE SYNC STRATEJİSİ**
-
-#### **1. CONFLICT-FREE SYNC MODEL**
-```sql
--- Enhanced tables for sync
-ALTER TABLE diary_entries ADD COLUMN:
-  sync_id UUID DEFAULT gen_random_uuid(),
-  last_modified TIMESTAMP DEFAULT NOW(),
-  sync_version INTEGER DEFAULT 1,
-  device_id VARCHAR(255),
-  sync_status VARCHAR(20) DEFAULT 'pending'; -- pending, synced, conflict
-
--- Sync log table
-CREATE TABLE sync_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entry_id UUID REFERENCES diary_entries(id),
-  device_id VARCHAR(255) NOT NULL,
-  action VARCHAR(20) NOT NULL, -- create, update, delete
-  sync_timestamp TIMESTAMP DEFAULT NOW(),
-  data_hash VARCHAR(255),
-  conflict_resolved BOOLEAN DEFAULT false
-);
-```
 
 #### **2. MULTI-DEVICE SYNC LOGIC**
-```javascript
+```
 // Sync service
 class SyncService {
   async syncToCloud(localEntries) {
@@ -1179,201 +1139,3 @@ class SyncService {
     }
   }
 }
-```
-
-### **C. DEPLOYMENT STRATEJİSİ**
-
-#### **1. CLOUD DATABASE (Supabase/PlanetScale)**
-```bash
-# Supabase setup
-npm install @supabase/supabase-js
-```
-
-```javascript
-// Cloud database config
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-)
-
-// Auto sync with real-time subscriptions
-supabase
-  .channel('entries')
-  .on('postgres_changes', {
-    event: '*',
-    schema: 'public',
-    table: 'diary_entries'
-  }, (payload) => {
-    // Real-time sync when cloud data changes
-    this.handleCloudUpdate(payload)
-  })
-  .subscribe()
-```
-
-#### **2. BACKEND HOSTING (Railway/Vercel)**
-```yaml
-# railway.toml
-[build]
-  builder = "NIXPACKS"
-  buildCommand = "npm run build"
-
-[deploy]
-  startCommand = "npm start"
-  healthcheckPath = "/health"
-  healthcheckTimeout = 300
-
-[environments.production]
-  variables = { NODE_ENV = "production" }
-```
-
-### **D. FRONTEND ADAPTASYONU**
-
-#### **1. API SERVICE LAYER**
-```typescript
-// src/services/api.ts
-class ApiService {
-  private baseURL = process.env.VITE_API_URL || 'http://localhost:3001/api/v1'
-  
-  // Dual mode: Electron IPC or HTTP API
-  async getEntries(): Promise<DiaryEntry[]> {
-    if (window.electronAPI) {
-      // Electron mode - local database
-      return window.electronAPI.diary.getEntries()
-    } else {
-      // Web mode - HTTP API
-      const response = await fetch(`${this.baseURL}/entries`)
-      return response.json()
-    }
-  }
-  
-  async createEntry(entry: CreateEntryDto): Promise<DiaryEntry> {
-    if (window.electronAPI) {
-      return window.electronAPI.diary.createEntry(entry)
-    } else {
-      const response = await fetch(`${this.baseURL}/entries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      })
-      return response.json()
-    }
-  }
-}
-```
-
-#### **2. SYNC STATUS COMPONENT**
-```typescript
-// SyncStatus.tsx
-const SyncStatus: React.FC = () => {
-  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced')
-  const [lastSync, setLastSync] = useState<Date | null>(null)
-  
-  return (
-    <div className="flex items-center space-x-2 text-sm">
-      {syncStatus === 'synced' && <CheckCircle className="w-4 h-4 text-green-500" />}
-      {syncStatus === 'syncing' && <Sync className="w-4 h-4 text-blue-500 animate-spin" />}
-      {syncStatus === 'offline' && <WifiOff className="w-4 h-4 text-red-500" />}
-      
-      <span className={syncStatus === 'offline' ? 'text-red-500' : 'text-gray-500'}>
-        {syncStatus === 'synced' && lastSync && `Son sync: ${lastSync.toLocaleTimeString()}`}
-        {syncStatus === 'syncing' && 'Senkronize ediliyor...'}
-        {syncStatus === 'offline' && 'Çevrimdışı'}
-      </span>
-    </div>
-  )
-}
-```
-
-### **E. AUTHENTICATION & MULTI-USER**
-```typescript
-// Auth service
-class AuthService {
-  async login(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email, password
-    })
-    
-    if (!error) {
-      // Sync user's data after login
-      await this.syncUserData(data.user.id)
-    }
-    
-    return { data, error }
-  }
-  
-  async register(email: string, password: string, name: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { name } }
-    })
-    
-    if (!error) {
-      // Create user workspace
-      await this.createUserWorkspace(data.user.id, name)
-    }
-    
-    return { data, error }
-  }
-}
-```
-
-## 🚀 IMPLEMENTATION ROADMAP
-
-### **PHASE 1: BACKEND SETUP (2-3 saat)**
-1. ✅ Express.js API server kurulumu
-2. ✅ Supabase cloud database setup
-3. ✅ Authentication system (Supabase Auth)
-4. ✅ API endpoints (CRUD operations)
-5. ✅ Railway deployment
-
-### **PHASE 2: SYNC SYSTEM (3-4 saat)**
-1. ✅ Conflict-free sync algorithm
-2. ✅ Real-time subscriptions
-3. ✅ Offline-first architecture
-4. ✅ Sync status indicators
-5. ✅ Conflict resolution UI
-
-### **PHASE 3: WEB PLATFORM (2 saat)**
-1. ✅ Web deployment (Vercel)
-2. ✅ PWA features
-3. ✅ Responsive design verification
-4. ✅ Performance optimization
-
-### **PHASE 4: DESKTOP ENHANCEMENT (1 saat)**
-1. ✅ Dual-mode API service
-2. ✅ Offline-online detection
-3. ✅ Auto-sync background process
-4. ✅ Desktop-specific features
-
-## 📊 TARGET ARCHITECTURE
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   DESKTOP APP   │    │    WEB APP      │    │   MOBILE APP    │
-│  (Electron)     │    │   (React PWA)   │    │ (React Native)  │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                    ┌─────────────▼───────────┐
-                    │     BACKEND API        │
-                    │  (Node.js + Express)   │
-                    └─────────────┬───────────┘
-                                 │
-                    ┌─────────────▼───────────┐
-                    │   CLOUD DATABASE       │
-                    │    (Supabase)          │
-                    └─────────────────────────┘
-```
-
-## 🎯 SUCCESS METRICS
-
-**Backend & Sync başarıyla tamamlandığında:**
-- ✅ Web + Desktop + Mobile erişim
-- ✅ Real-time multi-device sync
-- ✅ Offline-first operation
-- ✅ Conflict-free data consistency
-- ✅ Scalable cloud infrastructure
-- ✅ Professional authentication
-
-**Bu backend + sync sistemi ile true multi-platform experience! 🌐**

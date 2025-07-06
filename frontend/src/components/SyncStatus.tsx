@@ -1,141 +1,167 @@
-import React, { useState, useEffect } from 'react'
-import { CheckCircle, RotateCw, WifiOff, AlertCircle } from 'lucide-react'
-import { useTheme } from '../contexts/ThemeContext'
-import { apiService } from '../services/api'
+// ==========================================
+// GÜNCE DEFTERI - Sync Status Component (Context7 Uyumlu)
+// Real-time sync status indicator
+// ==========================================
 
-type SyncStatusType = 'synced' | 'syncing' | 'offline' | 'error'
+import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CheckCircle, Wifi, WifiOff, AlertCircle, RotateCw } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 const SyncStatus: React.FC = () => {
-  const { isDarkTheme } = useTheme()
-  const [status, setStatus] = useState<SyncStatusType>('synced')
-  const [lastSync, setLastSync] = useState<Date | null>(null)
+  const { syncStatus, user } = useAuth()
 
-  useEffect(() => {
-    // Initial check
-    checkSyncStatus()
+  // Don't show sync status if user is not authenticated
+  if (!user) return null
 
-    // Set up periodic checks (every 30 seconds)
-    const interval = setInterval(checkSyncStatus, 30000)
-
-    // Listen for online/offline events in web mode
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', handleOnline)
-      window.addEventListener('offline', handleOffline)
-    }
-
-    return () => {
-      clearInterval(interval)
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('online', handleOnline)
-        window.removeEventListener('offline', handleOffline)
-      }
-    }
-  }, [])
-
-  const handleOnline = () => {
-    setStatus('syncing')
-    checkSyncStatus()
+  // Only show the indicator for "active" states that require user attention.
+  // For 'connected' or 'synced' state, we don't need a persistent indicator.
+  const activeStates: SyncStatus['status'][] = ['syncing', 'offline', 'conflict', 'error'];
+  if (!syncStatus || !activeStates.includes(syncStatus.status)) {
+    return null;
   }
 
-  const handleOffline = () => {
-    setStatus('offline')
-  }
-
-  const checkSyncStatus = async () => {
-    try {
-      setStatus('syncing')
-      
-      // Check if we're online (for web mode)
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setStatus('offline')
-        return
-      }
-
-      try {
-        const health = await apiService.healthCheck()
-        // Check if health response indicates success
-        if (health && health.status === 'OK') {
-          setStatus('synced')
-          setLastSync(new Date())
-        } else {
-          setStatus('error')
+  const getStatusInfo = () => {
+    switch (syncStatus.status) {
+      case 'synced':
+        return {
+          icon: CheckCircle,
+          color: 'text-green-500',
+          bgColor: 'bg-green-500/10',
+          borderColor: 'border-green-500/20',
+          message: 'Senkronize',
+          description: syncStatus.lastSync 
+            ? `Son sync: ${syncStatus.lastSync.toLocaleTimeString('tr-TR')}`
+            : 'Veriler güncel'
         }
-      } catch (error) {
-        console.warn('API health check failed, running in offline mode:', error)
-        setStatus('offline')
-      }
-    } catch (error) {
-      console.error('❌ Sync status check failed:', error)
-      setStatus('error')
-    }
-  }
-
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'synced':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
       case 'syncing':
-        return <RotateCw className="w-4 h-4 text-blue-500 animate-spin" />
+        return {
+          icon: RotateCw,
+          color: 'text-blue-500',
+          bgColor: 'bg-blue-500/10',
+          borderColor: 'border-blue-500/20',
+          message: 'Senkronize ediliyor...',
+          description: 'Veriler senkronize ediliyor',
+          animate: true
+        }
       case 'offline':
-        return <WifiOff className="w-4 h-4 text-yellow-500" />
+        return {
+          icon: WifiOff,
+          color: 'text-red-500',
+          bgColor: 'bg-red-500/10',
+          borderColor: 'border-red-500/20',
+          message: 'Çevrimdışı',
+          description: 'Bağlantı yok'
+        }
+      case 'conflict':
+        return {
+          icon: AlertCircle,
+          color: 'text-yellow-500',
+          bgColor: 'bg-yellow-500/10',
+          borderColor: 'border-yellow-500/20',
+          message: 'Çakışma',
+          description: 'Veri çakışması tespit edildi'
+        }
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />
+        return {
+          icon: AlertCircle,
+          color: 'text-red-500',
+          bgColor: 'bg-red-500/10',
+          borderColor: 'border-red-500/20',
+          message: 'Hata',
+          description: 'Senkronizasyon hatası'
+        }
       default:
-        return <WifiOff className="w-4 h-4 text-gray-500" />
+        return {
+          icon: Wifi,
+          color: 'text-slate-500',
+          bgColor: 'bg-slate-500/10',
+          borderColor: 'border-slate-500/20',
+          message: 'Hazır',
+          description: 'Senkronizasyon hazır'
+        }
     }
   }
 
-  const getStatusText = () => {
-    const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
-    const mode = isElectron ? 'Desktop' : 'Web'
-    
-    switch (status) {
-      case 'synced':
-        return lastSync 
-          ? `${mode} - Senkronize (${lastSync.toLocaleTimeString()})`
-          : `${mode} - Senkronize`
-      case 'syncing':
-        return `${mode} - Senkronize ediliyor...`
-      case 'offline':
-        return `${mode} - Çevrimdışı / Yerel Kayıt`
-      case 'error':
-        return `${mode} - Bağlantı hatası`
-      default:
-        return `${mode} - Durum kontrol ediliyor...`
-    }
-  }
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'synced':
-        return isDarkTheme ? 'text-green-400' : 'text-green-600'
-      case 'syncing':
-        return isDarkTheme ? 'text-blue-400' : 'text-blue-600'
-      case 'offline':
-        return isDarkTheme ? 'text-red-400' : 'text-red-600'
-      case 'error':
-        return isDarkTheme ? 'text-red-400' : 'text-red-600'
-      default:
-        return isDarkTheme ? 'text-slate-400' : 'text-slate-600'
-    }
-  }
-
-  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+  const statusInfo = getStatusInfo()
+  const Icon = statusInfo.icon
 
   return (
-    <div className={`flex items-center space-x-2 text-xs transition-colors duration-700 ${getStatusColor()}`}>
-      {getStatusIcon()}
-      <span>{getStatusText()}</span>
-      
-      {/* Mode indicator badge */}
-      <span className={`px-2 py-1 rounded-full text-xs font-medium transition-colors duration-700 ${
-        isElectron
-          ? (isDarkTheme ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800')
-          : (isDarkTheme ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800')
-      }`}>
-        {isElectron ? 'Desktop' : 'Web'}
-      </span>
-    </div>
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: -50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -50 }}
+        className="fixed top-4 right-4 z-50"
+      >
+        <motion.div
+          className={`
+            ${statusInfo.bgColor} ${statusInfo.borderColor}
+            backdrop-blur-sm border rounded-lg px-3 py-2 shadow-lg
+            flex items-center space-x-2 min-w-[200px]
+          `}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          {/* Status Icon */}
+          <motion.div
+            className={statusInfo.color}
+            animate={statusInfo.animate ? { rotate: 360 } : {}}
+            transition={statusInfo.animate ? {
+              duration: 1,
+              repeat: Infinity,
+              ease: 'linear'
+            } : {}}
+          >
+            <Icon className="w-4 h-4" />
+          </motion.div>
+
+          {/* Status Text */}
+          <div className="flex-1 min-w-0">
+            <div className={`text-sm font-medium ${statusInfo.color}`}>
+              {statusInfo.message}
+            </div>
+            <div className="text-xs text-slate-400 truncate">
+              {statusInfo.description}
+            </div>
+          </div>
+
+          {/* Pending Changes Badge */}
+          {syncStatus.pendingChanges && syncStatus.pendingChanges > 0 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="bg-amber-500 text-amber-900 text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center"
+            >
+              {syncStatus.pendingChanges}
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Connection Quality Indicator */}
+        {syncStatus.status === 'synced' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mt-1 flex justify-end"
+          >
+            <div className="flex space-x-1">
+              {[1, 2, 3].map((bar) => (
+                <motion.div
+                  key={bar}
+                  className="w-1 bg-green-500 rounded-full"
+                  style={{ height: `${bar * 3 + 2}px` }}
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: bar * 0.1, duration: 0.3 }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </AnimatePresence>
   )
 }
 

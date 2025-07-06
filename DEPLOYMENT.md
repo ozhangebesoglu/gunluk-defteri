@@ -1,199 +1,139 @@
-# 📦 Günce Defteri - Deployment Durumu ve Rehberi
+# 📦 Günce Defteri - Sunucuya Kurulum (Deployment) Rehberi
 
-## 🎯 Mevcut Durum Özeti (27 Haziran 2025)
+Bu rehber, Günce Defteri uygulamasının backend ve frontend'ini standart bir Node.js ortamına (örneğin bir Ubuntu sunucusu, DigitalOcean Droplet, Heroku vb.) nasıl kurup çalıştıracağınızı adım adım açıklar.
 
-### ✅ TAMAMLANAN İŞLER
-- **Desktop Electron App**: Build edildi ve çalışıyor
-- **Frontend React App**: TypeScript + Vite + TailwindCSS hazır
-- **SQLite Integration**: Production Electron için hazır
-- **PostgreSQL Dev Setup**: Development için hazır
-- **Security Configuration**: CSP, isolation, preload güvenliği mevcut
-- **PWA Features**: Service Worker, manifest hazır
-- **Database Migrations**: SQLite + PostgreSQL migration'lar mevcut
-
-### ⚠️ AKTIF SORUNLAR
-- **Database Config Error**: `databaseConfig is not defined` hatası düzeltildi
-- **Build Dependencies**: SQLite3 native dependency sorunu çözüldü
-- **Path Resolution**: Production build path sorunları çözüldü
-
-### 🔄 SON YAPILAN DÜZELTMELER
-1. `src/main/database.js`'de eksik `databaseConfig` tanımı eklendi
-2. SQLite fallback sistemi eklendi
-3. Migration path'leri dynamic olarak düzeltildi
-4. Native dependencies rebuild edildi
+Bu yapılandırma, Docker **gerektirmez**.
 
 ---
 
-## 🚀 Platform Launch Durumu
+## ✅ Gereksinimler
 
-### ✅ Desktop App (Windows) - HAZIR
-- **Build Status**: ✅ Başarılı (`Gunce Diary-1.0.0-Setup.exe`)
-- **Database**: ✅ SQLite (production) + PostgreSQL (dev)
-- **Size**: 141MB
-- **Security**: ✅ Electron güvenlik best practices
-- **Auto-updater**: ✅ Hazır altyapısı
-
-### 🟡 Web App (PWA) - YARIM HAZIR
-- **Frontend Build**: ✅ Hazır
-- **PWA Features**: ✅ Service Worker + manifest
-- **Backend API**: ⚠️ Eksik (sadece Supabase entegrasyonu var)
-- **Hosting**: ⚠️ Deploy edilmedi
-
-### ❌ Mobile App - HENÜZ YOK
-- **Capacitor**: ❌ Kurulmamış
-- **iOS Build**: ❌ Hazırlanmamış
-- **Android Build**: ❌ Hazırlanmamış
+- **Node.js**: v18.x veya daha yeni bir sürüm.
+- **npm**: Node.js ile birlikte gelir.
+- **Git**: Projeyi sunucuya klonlamak için.
+- **PM2**: Node.js uygulamalarını production'da yönetmek için global olarak kurulmuş bir süreç yöneticisi.
 
 ---
 
-## 🖥️ Desktop App Deployment (TAMAMLANDI)
+## 🚀 Kurulum Adımları
 
-### Windows Build ✅
+### 1. Sunucu Hazırlığı ve PM2 Kurulumu
+
+Eğer sunucunuzda `pm2` yüklü değilse, aşağıdaki komutla global olarak yükleyin:
 ```bash
-npm run dist  # ÇALIŞIYOR
-# Output: dist-electron/Gunce Diary-1.0.0-Setup.exe (141MB)
+npm install pm2 -g
 ```
 
-### Son Build Durumu:
-- **Build Time**: ~2 dakika
-- **Dependencies**: sqlite3, argon2, electron-log dahil
-- **Security**: CSP headers, context isolation aktif
-- **Database**: SQLite local storage
+### 2. Projeyi Klonlama ve Bağımlılıkları Yükleme
 
-### Cross-Platform Build (TEST EDİLMEDİ)
+Projeyi sunucunuza klonlayın ve tüm bağımlılıkları yükleyin.
+
 ```bash
-npm run build:all  # macOS + Linux test edilmedi
+# Projeyi klonlayın
+git clone <projenizin-git-adresi> gunce-defteri
+cd gunce-defteri
+
+# Ana projenin bağımlılıklarını yükleyin
+npm install
+
+# Backend bağımlılıklarını yükleyin
+npm install --prefix backend
+
+# Frontend bağımlılıklarını yükleyin
+npm install --prefix frontend
 ```
 
----
+### 3. Frontend Uygulamasını Build Etme
 
-## 🌐 Web App Deployment (EKSIK)
+Frontend (React) uygulamasının production için optimize edilmiş statik dosyalarını oluşturun.
 
-### Mevcut Frontend
-- **Build**: ✅ `frontend/dist/` hazır
-- **PWA**: ✅ Manifest + Service Worker
-- **API Integration**: ✅ Supabase client mevcut
-
-### Eksik Web Infrastructure
-- [ ] Backend API deployment
-- [ ] Production environment variables
-- [ ] HTTPS hosting
-- [ ] Domain configuration
-
-### Hızlı Web Deploy (YAPILABİLİR)
 ```bash
-# 1. Frontend build (HAZIR)
-cd frontend && npm run build
+npm run build --prefix frontend
+```
+Bu komut, `frontend/dist` klasörünü oluşturacaktır. Backend sunucumuz bu klasörü sunacak şekilde ayarlanmıştır.
 
-# 2. Static hosting deploy (YAPILABİLİR)
-# Vercel: vercel --prod
-# Netlify: netlify deploy --prod --dir=frontend/dist
+### 4. Ortam Değişkenlerini Ayarlama (`.env`)
+
+Projenin ana dizininde `.env` adında bir dosya oluşturun. Bu dosya, uygulamanın production'da ihtiyaç duyacağı hassas bilgileri içerecektir. `env.example` dosyasını kopyalayarak başlayabilirsiniz.
+
+```bash
+cp env.example .env
 ```
 
+Şimdi `.env` dosyasını bir metin düzenleyici ile açıp (`nano .env`) gerekli alanları doldurun:
+
+```ini
+# .env dosyası
+
+# Backend için Sunucu Ayarları
+NODE_ENV=production
+PORT=8080 # Uygulamanın çalışacağı port
+
+# Supabase Anahtarları (Production)
+SUPABASE_URL=https://<your-project-id>.supabase.co
+SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+
+# Sentry (Hata Takibi için - Opsiyonel)
+SENTRY_DSN=your-backend-sentry-dsn
+
+# --- Frontend için ---
+# VITE_ öneki Vite tarafından kullanılır
+
+VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+VITE_API_BASE_URL="http://<sunucu-ip-adresiniz>:8080/api/v1" # Backend API adresiniz
+VITE_SENTRY_DSN=your-frontend-sentry-dsn
+
+# Sentry Kaynak Haritası Yüklemesi için (Build sırasında kullanılır)
+SENTRY_ORG=your-sentry-organization-slug
+SENTRY_PROJECT=your-sentry-project-slug
+SENTRY_AUTH_TOKEN=your-sentry-auth-token
+```
+**Önemli:** `VITE_API_BASE_URL`'i sunucunuzun IP adresine veya alan adına göre doğru şekilde ayarladığınızdan emin olun.
+
 ---
 
-## 🔧 Backend API Durumu (EKSIK)
+## ✨ Uygulamayı PM2 ile Başlatma
 
-### Mevcut Backend
-- **Code**: ✅ `backend/` klasöründe Express.js API
-- **Database**: ✅ PostgreSQL with Knex.js
-- **Deployment**: ❌ Hiçbir cloud'da deploy edilmemiş
+Tüm kurulum tamamlandıktan sonra, uygulamayı `pm2` ile başlatabilirsiniz. Projenin ana dizininde bulunan `ecosystem.config.js` dosyası tüm ayarları içerir.
 
-### Backend Deploy Seçenekleri:
 ```bash
-# Railway (ÖNERİLEN)
-cd backend
-railway deploy
-
-# Heroku
-heroku create gunce-api
-git subtree push --prefix backend heroku main
-
-# Vercel (Serverless)
-cd backend && vercel
+# Uygulamayı production modunda başlat
+pm2 start ecosystem.config.js --env production
 ```
 
----
+### Faydalı PM2 Komutları
 
-## 📊 Deployment Checklist
+- **Uygulama durumunu ve logları görüntüleme:**
+  ```bash
+  pm2 monit
+  ```
 
-### Desktop App ✅
-- [x] Electron build config
-- [x] SQLite local database
-- [x] Auto-updater infrastructure
-- [x] Security policies (CSP)
-- [x] Native dependencies (SQLite3, Argon2)
-- [x] Windows installer (NSIS)
-- [ ] Code signing (EKSIK)
-- [ ] macOS build test (EKSIK)
-- [ ] Linux build test (EKSIK)
+- **Tüm uygulamaları listeleme:**
+  ```bash
+  pm2 list
+  ```
 
-### Web App 🟡
-- [x] PWA manifest
-- [x] Service Worker
-- [x] Frontend build ready
-- [x] Responsive design
-- [ ] Production hosting (EKSIK)
-- [ ] HTTPS configuration (EKSIK)
-- [ ] Domain setup (EKSIK)
-- [ ] Environment variables (EKSIK)
+- **Uygulamayı yeniden başlatma:**
+  ```bash
+  pm2 restart gunce-defteri-app
+  ```
 
-### Backend API ❌
-- [x] Express.js server code
-- [x] PostgreSQL integration
-- [x] Security middleware
-- [ ] Cloud deployment (EKSIK)
-- [ ] Environment variables (EKSIK)
-- [ ] Database hosting (EKSIK)
-- [ ] API documentation (EKSIK)
+- **Uygulamayı durdurma:**
+  ```bash
+  pm2 stop gunce-defteri-app
+  ```
 
----
+- **Uygulama loglarını canlı izleme:**
+  ```bash
+  pm2 logs gunce-defteri-app
+  ```
 
-## 🎯 Sonraki Adımlar (Öncelik Sırası)
+- **Sunucu yeniden başladığında PM2'nin otomatik başlaması için:**
+  ```bash
+  pm2 startup
+  # Yukarıdaki komutun çıktısındaki komutu kopyalayıp çalıştırın
+  pm2 save
+  ```
 
-### 1. HEMEN YAPILABİLİR (30 dakika)
-```bash
-# Desktop app fix ve test
-npm run dist
-# Test: Yeni exe'yi kur ve çalıştır
-```
-
-### 2. WEB DEPLOY (2 saat)
-```bash
-# Backend railway'a deploy
-cd backend && railway deploy
-
-# Frontend Vercel'e deploy
-cd frontend && vercel --prod
-```
-
-### 3. PRODUCTION READY (1 gün)
-- Environment variables setup
-- Domain configuration
-- SSL certificates
-- Performance monitoring
-
-### 4. MOBILE SUPPORT (3 gün)
-- Capacitor integration
-- iOS/Android builds
-- App store preparation
-
----
-
-## 🔒 Production Security Notes
-
-### Electron App ✅
-- Context isolation: true
-- Node integration: false
-- CSP headers active
-- Secure IPC handlers
-
-### Web App ⚠️
-- HTTPS required (not configured)
-- CORS policies needed
-- API rate limiting required
-- Environment variable security
-
----
-
-**🎉 SONUÇ: Desktop app production-ready, web deploy 2 saatte tamamlanabilir!** 
+Artık uygulamanız `http://<sunucu-ip-adresiniz>:8080` adresinde çalışıyor olmalı. 

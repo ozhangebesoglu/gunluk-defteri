@@ -11,11 +11,57 @@ import {
   EyeOff,
   Check,
   AlertCircle,
-  TestTube
+  TestTube,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { logger } from '../utils/logger'
 import { apiService } from '../services/api'
+import * as Sentry from '@sentry/react';
+
+// Password security utilities
+const PASSWORD_SECURITY = {
+  minLength: 8,
+  maxAttempts: 3,
+  lockoutDuration: 300000, // 5 minutes
+  strengthChecks: {
+    length: (pwd: string) => pwd.length >= 8,
+    lowercase: (pwd: string) => /[a-z]/.test(pwd),
+    uppercase: (pwd: string) => /[A-Z]/.test(pwd),
+    numbers: (pwd: string) => /\d/.test(pwd),
+    special: (pwd: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+  }
+}
+
+const checkPasswordStrength = (password: string) => {
+  const checks = Object.entries(PASSWORD_SECURITY.strengthChecks).map(([key, check]) => ({
+    key,
+    passed: check(password)
+  }))
+  
+  const score = checks.filter(c => c.passed).length
+  const strength = score < 2 ? 'weak' : score < 4 ? 'medium' : 'strong'
+  
+  return {
+    score,
+    strength,
+    checks: checks.reduce((acc, c) => ({ ...acc, [c.key]: c.passed }), {}),
+    isValid: score >= 3,
+    percentage: (score / 5) * 100
+  }
+}
+
+const checkHTTPSRequirement = () => {
+  const isHTTPS = window.location.protocol === 'https:'
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  
+  return {
+    isSecure: isHTTPS || isLocalhost,
+    protocol: window.location.protocol,
+    hostname: window.location.hostname
+  }
+}
 
 const Settings: React.FC = () => {
   const { isDarkTheme, toggleTheme } = useTheme()
@@ -38,11 +84,52 @@ const Settings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  
+  // Security state
+  const [passwordStrength, setPasswordStrength] = useState(checkPasswordStrength(''))
+  const [securityWarnings, setSecurityWarnings] = useState<string[]>([])
+  const [passwordAttempts, setPasswordAttempts] = useState(0)
+  const [isLockedOut, setIsLockedOut] = useState(false)
 
   // Load settings on component mount
   useEffect(() => {
     loadSettings()
+    checkSecurityRequirements()
   }, [])
+
+  // Password strength checking
+  useEffect(() => {
+    const strength = checkPasswordStrength(password)
+    setPasswordStrength(strength)
+  }, [password])
+
+  const checkSecurityRequirements = () => {
+    const warnings: string[] = []
+    const httpsCheck = checkHTTPSRequirement()
+    
+    if (!httpsCheck.isSecure) {
+      warnings.push(`HTTPS gerekli! Şu anki protokol: ${httpsCheck.protocol}`)
+    }
+    
+    // Check for password attempts in localStorage
+    const attempts = parseInt(localStorage.getItem('password_attempts') || '0')
+    const lastAttempt = parseInt(localStorage.getItem('last_password_attempt') || '0')
+    const now = Date.now()
+    
+    if (attempts >= PASSWORD_SECURITY.maxAttempts && (now - lastAttempt) < PASSWORD_SECURITY.lockoutDuration) {
+      setIsLockedOut(true)
+      const remainingTime = Math.ceil((PASSWORD_SECURITY.lockoutDuration - (now - lastAttempt)) / 60000)
+      warnings.push(`Çok fazla yanlış deneme! ${remainingTime} dakika bekleyin.`)
+    } else if (attempts >= PASSWORD_SECURITY.maxAttempts) {
+      // Reset attempts if lockout period expired
+      localStorage.removeItem('password_attempts')
+      localStorage.removeItem('last_password_attempt')
+      setIsLockedOut(false)
+    }
+    
+    setPasswordAttempts(attempts)
+    setSecurityWarnings(warnings)
+  }
 
   const loadSettings = async () => {
     try {
@@ -88,6 +175,29 @@ const Settings: React.FC = () => {
   const showMessage = (type: string, text: string) => {
     setMessage({ type, text })
     setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+  }
+
+  const recordPasswordAttempt = (success: boolean) => {
+    const now = Date.now()
+    
+    if (success) {
+      // Reset attempts on success
+      localStorage.removeItem('password_attempts')
+      localStorage.removeItem('last_password_attempt')
+      setPasswordAttempts(0)
+      setIsLockedOut(false)
+    } else {
+      // Increment attempts on failure
+      const newAttempts = passwordAttempts + 1
+      localStorage.setItem('password_attempts', newAttempts.toString())
+      localStorage.setItem('last_password_attempt', now.toString())
+      setPasswordAttempts(newAttempts)
+      
+      if (newAttempts >= PASSWORD_SECURITY.maxAttempts) {
+        setIsLockedOut(true)
+        showMessage('error', `Çok fazla yanlış deneme! ${Math.ceil(PASSWORD_SECURITY.lockoutDuration / 60000)} dakika bekleyin.`)
+      }
+    }
   }
 
   // Notification settings
@@ -147,41 +257,63 @@ const Settings: React.FC = () => {
     }
   }
 
-  // Password protection
+  // Password protection - ENHANCED SECURITY
   const handlePasswordSetup = async () => {
+    // Security checks
+    if (isLockedOut) {
+      showMessage('error', 'Çok fazla yanlış deneme! Lütfen bekleyin.')
+      return
+    }
+
+    const httpsCheck = checkHTTPSRequirement()
+    if (!httpsCheck.isSecure) {
+      showMessage('error', 'Güvenlik nedeniyle HTTPS bağlantısı gerekli!')
+      return
+    }
+
     if (password !== confirmPassword) {
       showMessage('error', 'Şifreler eşleşmiyor!')
+      recordPasswordAttempt(false)
       return
     }
     
-    if (password.length < 6) {
-      showMessage('error', 'Şifre en az 6 karakter olmalıdır!')
+    if (!passwordStrength.isValid) {
+      showMessage('error', `Şifre çok zayıf! En az ${PASSWORD_SECURITY.minLength} karakter ve 3 güvenlik kriteri gerekli.`)
       return
     }
 
     setIsLoading(true)
     try {
-      if (isElectron) {
-        // Use Electron password API
-        const result = await window.electronAPI?.password.set(password)
-        if (result?.success) {
-          await saveSettings({ passwordProtection: true })
-          showMessage('success', 'Şifre koruması aktif edildi!')
-        } else {
-          showMessage('error', result?.error || 'Şifre ayarlanamadı!')
-        }
-      } else {
-        // Simple encoding for web (use proper hashing in production)
-        const hashedPassword = btoa(password)
-        localStorage.setItem('gunce_password', hashedPassword)
+      // Enhanced password validation before sending to backend
+      if (password.length < PASSWORD_SECURITY.minLength) {
+        throw new Error(`Şifre en az ${PASSWORD_SECURITY.minLength} karakter olmalıdır!`)
+      }
+
+      // Log security attempt (without password content)
+      logger.info('Password setup attempt', {
+        passwordLength: password.length,
+        strengthScore: passwordStrength.score,
+        https: httpsCheck.isSecure,
+        platform: isElectron ? 'electron' : 'web'
+      })
+
+      const result = await apiService.updatePassword(password)
+      
+      if (result.success) {
         await saveSettings({ passwordProtection: true })
-        showMessage('success', 'Şifre koruması aktif edildi!')
+        showMessage('success', 'Uygulama şifresi başarıyla ayarlandı!')
+        recordPasswordAttempt(true)
+      } else {
+        showMessage('error', result.error || 'Şifre ayarlanamadı!')
+        recordPasswordAttempt(false)
       }
       
       setPassword('')
       setConfirmPassword('')
-    } catch (error) {
-      showMessage('error', 'Şifre ayarlanamadı!')
+    } catch (error: any) {
+      logger.error('Password setup failed:', error)
+      showMessage('error', error.message || 'Şifre ayarlanırken bir hata oluştu.')
+      recordPasswordAttempt(false)
     } finally {
       setIsLoading(false)
     }
@@ -189,20 +321,20 @@ const Settings: React.FC = () => {
 
   const handlePasswordRemove = async () => {
     if (confirm('Şifre korumasını kaldırmak istediğinizden emin misiniz?')) {
+      setIsLoading(true);
       try {
-        if (isElectron) {
-          const result = await window.electronAPI?.password.remove()
-          if (result?.success) {
+        const result = await apiService.updatePassword(null)
+        if (result.success) {
             await saveSettings({ passwordProtection: false })
             showMessage('success', 'Şifre koruması kaldırıldı!')
-          }
+            recordPasswordAttempt(true)
         } else {
-          localStorage.removeItem('gunce_password')
-          await saveSettings({ passwordProtection: false })
-          showMessage('success', 'Şifre koruması kaldırıldı!')
+            showMessage('error', result.error || 'Şifre kaldırılamadı!')
         }
-      } catch (error) {
-        showMessage('error', 'Şifre kaldırılamadı!')
+      } catch (error: any) {
+        showMessage('error', error.message || 'Şifre kaldırılamadı!')
+      } finally {
+        setIsLoading(false);
       }
     }
   }
@@ -334,6 +466,16 @@ const Settings: React.FC = () => {
       }
     }
   }
+
+  // Sentry Test Butonu
+  const handleSentryTest = () => {
+    try {
+      throw new Error("Sentry Frontend Test Error");
+    } catch (error) {
+      Sentry.captureException(error);
+      showMessage('success', 'Sentry test hatası gönderildi! Kontrol edebilirsiniz.');
+    }
+  };
 
   return (
     <div className={`w-full h-full relative transition-all duration-700 ${
@@ -634,15 +776,67 @@ const Settings: React.FC = () => {
                   </label>
                 </div>
 
+                {/* Security Warnings */}
+                {securityWarnings.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-3 rounded-lg border-l-4 border-red-500 ${
+                      isDarkTheme ? 'bg-red-900/20' : 'bg-red-50'
+                    }`}
+                  >
+                    <div className="flex items-start">
+                      <AlertTriangle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-medium text-red-600 mb-1">Güvenlik Uyarıları</h4>
+                        <ul className="text-xs text-red-600 space-y-1">
+                          {securityWarnings.map((warning, index) => (
+                            <li key={index}>• {warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Rate Limiting Info */}
+                {passwordAttempts > 0 && !isLockedOut && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-3 rounded-lg border-l-4 border-yellow-500 ${
+                      isDarkTheme ? 'bg-yellow-900/20' : 'bg-yellow-50'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" />
+                      <span className="text-xs text-yellow-600">
+                        Yanlış deneme: {passwordAttempts}/{PASSWORD_SECURITY.maxAttempts}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+
                 {!settings.passwordProtection && (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="relative">
                       <input
                         type={settings.showPassword ? 'text' : 'password'}
-                        placeholder="Yeni şifre"
+                        placeholder="Yeni şifre (min. 8 karakter)"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLockedOut}
                         className={`w-full px-3 py-2 pr-10 rounded-lg border transition-all duration-700 ${
+                          isLockedOut 
+                            ? 'opacity-50 cursor-not-allowed' 
+                            : ''
+                        } ${
+                          password && !passwordStrength.isValid
+                            ? 'border-red-500'
+                            : password && passwordStrength.isValid
+                              ? 'border-green-500'
+                              : ''
+                        } ${
                           isDarkTheme 
                             ? 'bg-rich-brown-600 border-rich-brown-500 text-rich-brown-100 placeholder-rich-brown-300' 
                             : 'bg-white border-amber-300 text-amber-900 placeholder-amber-500'
@@ -651,6 +845,7 @@ const Settings: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => saveSettings({ showPassword: !settings.showPassword })}
+                        disabled={isLockedOut}
                         className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors duration-700 ${
                           isDarkTheme ? 'text-rich-brown-300 hover:text-rich-brown-100' : 'text-amber-500 hover:text-amber-700'
                         }`}
@@ -658,28 +853,131 @@ const Settings: React.FC = () => {
                         {settings.showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+
+                    {/* Password Strength Indicator */}
+                    {password && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs ${
+                            isDarkTheme ? 'text-rich-brown-200' : 'text-amber-700'
+                          }`}>
+                            Şifre Gücü: {passwordStrength.strength === 'weak' ? 'Zayıf' : passwordStrength.strength === 'medium' ? 'Orta' : 'Güçlü'}
+                          </span>
+                          <span className={`text-xs ${
+                            passwordStrength.isValid ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {passwordStrength.score}/5
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${passwordStrength.percentage}%` }}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              passwordStrength.strength === 'weak' ? 'bg-red-500' :
+                              passwordStrength.strength === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                            }`}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          {Object.entries(passwordStrength.checks).map(([key, passed]) => (
+                            <div key={key} className={`flex items-center ${passed ? 'text-green-600' : 'text-red-600'}`}>
+                              {passed ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                              <span>
+                                {key === 'length' ? '8+ karakter' :
+                                 key === 'lowercase' ? 'Küçük harf' :
+                                 key === 'uppercase' ? 'Büyük harf' :
+                                 key === 'numbers' ? 'Rakam' : 'Özel karakter'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
                     <input
                       type={settings.showPassword ? 'text' : 'password'}
                       placeholder="Şifre tekrar"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isLockedOut}
                       className={`w-full px-3 py-2 rounded-lg border transition-all duration-700 ${
+                        isLockedOut 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : ''
+                      } ${
+                        confirmPassword && password !== confirmPassword
+                          ? 'border-red-500'
+                          : confirmPassword && password === confirmPassword && confirmPassword
+                            ? 'border-green-500'
+                            : ''
+                      } ${
                         isDarkTheme 
                           ? 'bg-rich-brown-600 border-rich-brown-500 text-rich-brown-100 placeholder-rich-brown-300' 
                           : 'bg-white border-amber-300 text-amber-900 placeholder-amber-500'
                       }`}
                     />
+
+                    {/* Password Match Indicator */}
+                    {confirmPassword && (
+                      <div className={`text-xs flex items-center ${
+                        password === confirmPassword ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {password === confirmPassword ? (
+                          <>
+                            <CheckCircle size={12} className="mr-1" />
+                            Şifreler eşleşiyor
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={12} className="mr-1" />
+                            Şifreler eşleşmiyor
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     <button
                       onClick={handlePasswordSetup}
-                      disabled={!password || !confirmPassword || isLoading}
+                      disabled={!password || !confirmPassword || isLoading || isLockedOut || !passwordStrength.isValid}
                       className={`w-full px-4 py-2 rounded-lg font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
                         isDarkTheme 
                           ? 'bg-amber-500 hover:bg-amber-400 text-rich-brown-900' 
                           : 'bg-amber-600 hover:bg-amber-700 text-white'
                       }`}
                     >
-                      {isLoading ? '⏳ Ayarlanıyor...' : '🔒 Şifre Belirle'}
+                      {isLoading ? '⏳ Ayarlanıyor...' : 
+                       isLockedOut ? '🔒 Geçici Olarak Kilitli' :
+                       !passwordStrength.isValid ? '❌ Şifre Zayıf' :
+                       '🔒 Güvenli Şifre Belirle'}
                     </button>
+
+                    {/* Security Tips */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className={`p-3 rounded-lg ${
+                        isDarkTheme ? 'bg-rich-brown-700/50' : 'bg-amber-50'
+                      }`}
+                    >
+                      <h4 className={`text-xs font-medium mb-2 ${
+                        isDarkTheme ? 'text-amber-400' : 'text-amber-700'
+                      }`}>
+                        🛡️ Güvenlik İpuçları:
+                      </h4>
+                      <ul className={`text-xs space-y-1 ${
+                        isDarkTheme ? 'text-rich-brown-200' : 'text-amber-600'
+                      }`}>
+                        <li>• En az 8 karakter kullanın</li>
+                        <li>• Büyük harf, küçük harf, rakam ve özel karakter karıştırın</li>
+                        <li>• Kişisel bilgilerinizi kullanmayın</li>
+                        <li>• Başka yerlerde kullandığınız şifreyi kullanmayın</li>
+                      </ul>
+                    </motion.div>
                   </div>
                 )}
               </motion.div>
@@ -823,6 +1121,27 @@ const Settings: React.FC = () => {
             </div>
           </motion.div>
 
+          {/* Sentry Test Section */}
+          {import.meta.env.DEV && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Geliştirici Araçları</h3>
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center">
+                  <TestTube className="h-5 w-5 mr-3 text-blue-500" />
+                  <div>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">Sentry Test Hatası</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Frontend hata takibini test etmek için Sentry'ye manuel hata gönderin.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSentryTest}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition-colors"
+                >
+                  Hata Gönder
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

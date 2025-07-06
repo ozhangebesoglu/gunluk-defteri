@@ -58,7 +58,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { 
       text: 'Tüm Günceler', 
       icon: <BookOpen size={20} />, 
-      path: '/diary-list',
+      path: '/entries',
       description: 'Geçmiş yazılarınızı görüntüleyin'
     },
     { 
@@ -70,13 +70,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { 
       text: 'Yeni günce', 
       icon: <PenTool size={20} />, 
-      path: '/new-entry',
+      path: '/new',
       description: 'Yeni bir günce yazısı oluşturun'
     },
     { 
       text: 'İstatistikler', 
       icon: <BarChart3 size={20} />, 
-      path: '/statistics',
+      path: '/stats',
       description: 'Yazma alışkanlıklarınızı analiz edin'
     },
     { 

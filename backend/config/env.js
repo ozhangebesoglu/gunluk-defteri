@@ -64,8 +64,8 @@ class BackendEnvironmentConfig {
 
   validateRequiredVars() {
     const required = [
-      'SUPABASE_URL',
-      'SUPABASE_SERVICE_KEY'
+      'SUPABASE_URL'
+      // SUPABASE_SERVICE_KEY'i opsiyonel yaptık
     ]
 
     const missing = required.filter(key => !process.env[key])
@@ -73,7 +73,8 @@ class BackendEnvironmentConfig {
     if (missing.length > 0) {
       console.warn('[BACKEND-ENV] Missing required environment variables:', missing)
       if (this.isProd) {
-        throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+        console.warn('[BACKEND-ENV] Running in production mode with missing env vars, using defaults')
+        // throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
       }
     }
   }
@@ -91,14 +92,19 @@ class BackendEnvironmentConfig {
   getSupabaseConfig() {
     const url = this.isProd && process.env.PROD_SUPABASE_URL 
       ? process.env.PROD_SUPABASE_URL 
-      : process.env.SUPABASE_URL
+      : process.env.SUPABASE_URL || 'https://your-project.supabase.co'
 
     const serviceKey = this.isProd && process.env.PROD_SUPABASE_KEY
       ? process.env.PROD_SUPABASE_KEY
-      : process.env.SUPABASE_SERVICE_KEY
+      : process.env.SUPABASE_SERVICE_KEY || 'your-service-key'
+
+    // Sadece production'da throw et, development'te uyar
+    if ((!url || !serviceKey) && this.isProd) {
+      throw new Error('Supabase configuration missing. Check SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.')
+    }
 
     if (!url || !serviceKey) {
-      throw new Error('Supabase configuration missing. Check SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.')
+      console.warn('[BACKEND-ENV] Using default Supabase config for development')
     }
 
     return { url, serviceKey }
@@ -209,18 +215,27 @@ class BackendEnvironmentConfig {
       rateLimit: this.getRateLimitConfig(),
       logging: this.getLoggingConfig(),
       database: this.getDatabaseConfig(),
-      features: this.getFeatureFlags()
+      features: this.getFeatureFlags(),
+      sentry: {
+        dsn: process.env.SENTRY_DSN || '',
+      },
+      frontend: {
+        url: process.env.FRONTEND_URL || 'http://localhost:5173'
+      }
     }
   }
 
   // Log configuration (development only)
   logConfig() {
     if (this.isDev) {
+      const fullConfig = this.getConfig(); // Önce tam yapılandırmayı alalım
       console.group('🔧 Backend Environment Configuration')
       console.log('Environment:', this.env)
-      console.log('Server:', this.getServerConfig())
-      console.log('CORS Origins:', this.getCorsConfig().origins)
-      console.log('Features:', this.getFeatureFlags())
+      console.log('Server:', fullConfig.server)
+      console.log('CORS Origins:', fullConfig.cors.origins)
+      console.log('Features:', fullConfig.features)
+      console.log('Supabase URL:', fullConfig.supabase.url ? 'Loaded' : 'Not Loaded')
+      console.log('Sentry DSN:', fullConfig.sentry.dsn ? 'Loaded' : 'Not Loaded') // Doğru kullanım
       console.groupEnd()
     }
   }

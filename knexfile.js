@@ -1,14 +1,9 @@
+require('dotenv').config({ path: './.env' });
+
 module.exports = {
   development: {
     client: 'pg',
-    connection: {
-      host: '127.0.0.1',
-      port: 5433,
-      user: 'diary_user',
-      password: 'secure_password_123',
-      database: 'diary_app',
-      ssl: false
-    },
+    connection: process.env.DATABASE_URL,
     migrations: {
       directory: './db/migrations',
       tableName: 'knex_migrations'

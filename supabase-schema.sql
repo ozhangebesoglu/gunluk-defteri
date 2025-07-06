@@ -4,9 +4,20 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Profiles Table (Supabase Auth Integration)
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  full_name VARCHAR(255),
+  avatar_url VARCHAR(500),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Diary Entries Table
 CREATE TABLE IF NOT EXISTS diary_entries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   content TEXT NOT NULL,
   encrypted_content TEXT,
@@ -38,10 +49,12 @@ CREATE TABLE IF NOT EXISTS diary_tags (
 -- User Settings Table
 CREATE TABLE IF NOT EXISTS user_settings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  setting_key VARCHAR(100) NOT NULL UNIQUE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  setting_key VARCHAR(100) NOT NULL,
   setting_value TEXT,
   data_type VARCHAR(20) DEFAULT 'string',
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (user_id, setting_key) -- Ensures a user has only one value for each setting
 );
 
 -- Indexes for performance
@@ -58,20 +71,52 @@ CREATE INDEX IF NOT EXISTS idx_diary_entries_search ON diary_entries USING GIN (
 -- Composite indexes
 CREATE INDEX IF NOT EXISTS idx_diary_entries_date_sentiment ON diary_entries (entry_date, sentiment);
 
--- Row Level Security (RLS) - Optional for future multi-user support
+-- Row Level Security (RLS) - Multi-user support
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE diary_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE diary_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
--- Policies for anonymous access (current setup)
-CREATE POLICY "Enable all access for anonymous users" ON diary_entries
-  FOR ALL USING (true);
+-- Policies for authenticated users (secure multi-user)
+-- Profiles: Users can only see and update their own profile
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Enable all access for anonymous users" ON diary_tags
-  FOR ALL USING (true);
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Enable all access for anonymous users" ON user_settings
-  FOR ALL USING (true);
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Diary Entries: Users can only access their own entries
+CREATE POLICY "Users can view own entries" ON diary_entries
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own entries" ON diary_entries
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own entries" ON diary_entries
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own entries" ON diary_entries
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Tags: Shared across all users (read-only for now)
+CREATE POLICY "All users can view tags" ON diary_tags
+  FOR SELECT USING (true);
+
+-- User Settings: Users can only access their own settings
+CREATE POLICY "Users can view their own settings" ON user_settings
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own settings" ON user_settings
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own settings" ON user_settings
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own settings" ON user_settings
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- Update trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -83,11 +128,29 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers for updated_at
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_diary_entries_updated_at BEFORE UPDATE ON diary_entries 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to automatically create profile when user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function when a new user is created
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Insert demo data
 INSERT INTO diary_tags (id, name, color, description) VALUES

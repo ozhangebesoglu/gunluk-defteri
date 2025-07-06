@@ -9,7 +9,8 @@ import {
   Check, 
   Loader2, 
   ArrowLeft,
-  BookOpen
+  BookOpen,
+  X
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
@@ -167,6 +168,7 @@ const NewEntry: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-4">
             <button
               onClick={() => navigate('/dashboard')}
+              aria-label="Kontrol paneline geri dön"
               className={`flex items-center gap-2 transition-colors p-2 rounded-lg ${
                 isDarkTheme 
                   ? 'text-amber-300 hover:text-amber-200 hover:bg-amber-900' 
@@ -207,6 +209,7 @@ const NewEntry: React.FC = () => {
         {/* Error Alert */}
         {showError && (
           <motion.div
+            role="alert"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded-lg flex items-center"
@@ -242,83 +245,84 @@ const NewEntry: React.FC = () => {
               {/* Date and Mood Row */}
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-amber-900 mb-2">
+                  <label htmlFor="entry_date" className="block text-sm font-medium text-amber-900 mb-2">
                     <Calendar className="inline w-4 h-4 mr-2" />
                     Tarih
                   </label>
                   <input
                     type="date"
+                    id="entry_date"
                     value={format(entry.entry_date, 'yyyy-MM-dd')}
-                    onChange={(e) => setEntry(prev => ({ ...prev, entry_date: new Date(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200"
+                    onChange={(e) => setEntry(prev => ({...prev, entry_date: new Date(e.target.value)}))}
+                    className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-amber-500 text-amber-900`}
                   />
                 </div>
-
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-amber-900 mb-2">
+                
+                <fieldset className="flex-1">
+                  <legend className="block text-sm font-medium text-amber-900 mb-2">
                     <Smile className="inline w-4 h-4 mr-2" />
-                    Ruh Hali
-                  </label>
-                  <select
-                    value={entry.sentiment}
-                    onChange={(e) => setEntry(prev => ({ ...prev, sentiment: e.target.value }))}
-                    className={`w-full px-3 py-2 bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200 ${errors.sentiment ? 'border-red-400' : ''}`}
-                  >
-                    <option value="">Ruh halinizi seçin</option>
-                    {sentiments.map((sentiment) => (
-                      <option key={sentiment.value} value={sentiment.value}>
+                    Ruh Halin
+                    {errors.sentiment && <span id="sentiment-error" className="text-red-600 ml-2"> - {errors.sentiment}</span>}
+                  </legend>
+                  <div role="radiogroup" aria-labelledby="sentiment-error" className="flex flex-wrap gap-2">
+                    {sentiments.map(sentiment => (
+                      <button
+                        key={sentiment.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={entry.sentiment === sentiment.value}
+                        aria-describedby={errors.sentiment ? 'sentiment-error' : undefined}
+                        onClick={() => setEntry(prev => ({ ...prev, sentiment: sentiment.value }))}
+                        className={`px-3 py-2 text-sm rounded-full transition-all duration-200 border-2 ${
+                          entry.sentiment === sentiment.value
+                            ? 'border-amber-500 ring-2 ring-amber-300 bg-amber-100 text-amber-900'
+                            : 'border-gray-300 hover:border-amber-400'
+                        }`}
+                      >
                         {sentiment.label}
-                      </option>
+                      </button>
                     ))}
-                  </select>
-                  {errors.sentiment && (
-                    <p className="text-red-600 text-sm mt-1 flex items-center">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      {errors.sentiment}
-                    </p>
-                  )}
-                </div>
+                  </div>
+                </fieldset>
               </div>
 
               {/* Title */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-amber-900 mb-2">
+                <label htmlFor="title" className="block text-lg font-semibold text-amber-900 mb-2">
                   Başlık
                 </label>
                 <input
+                  id="title"
                   type="text"
                   value={entry.title}
-                  onChange={(e) => setEntry(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Bugün ne düşünüyorsunuz?"
-                  className={`w-full px-3 py-2 text-lg font-serif bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200 ${errors.title ? 'border-red-400' : ''}`}
+                  onChange={e => setEntry(prev => ({ ...prev, title: e.target.value }))}
+                  aria-required="true"
+                  aria-invalid={!!errors.title}
+                  aria-describedby={errors.title ? 'title-error' : undefined}
+                  placeholder="Günün başlığı ne olsun?"
+                  className={`w-full text-2xl font-serif p-2 bg-transparent border-b-2 border-amber-200 focus:outline-none focus:border-amber-500 ${ 'text-amber-900'}`}
                 />
-                {errors.title && (
-                  <p className="text-red-600 text-sm mt-1 flex items-center">
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    {errors.title}
-                  </p>
-                )}
+                {errors.title && <p id="title-error" className="text-red-600 mt-1 text-sm">{errors.title}</p>}
               </div>
 
               {/* Content */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-amber-900 mb-2">
-                  İçerik
+              <div className="mb-8">
+                <label htmlFor="content" className="block text-lg font-semibold text-amber-900 mb-2">
+                  Bugün neler oldu?
                 </label>
                 <textarea
+                  id="content"
                   value={entry.content}
-                  onChange={(e) => setEntry(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Sevgili günce..."
-                  rows={12}
-                  className={`w-full px-3 py-2 font-serif text-base leading-relaxed bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200 resize-none ${errors.content ? 'border-red-400' : ''}`}
-                  style={{ lineHeight: '30px' }}
+                  onChange={e => setEntry(prev => ({ ...prev, content: e.target.value }))}
+                  aria-required="true"
+                  aria-invalid={!!errors.content}
+                  aria-describedby={errors.content ? 'content-error' : undefined}
+                  placeholder="Düşüncelerini buraya yaz..."
+                  rows={15}
+                  className={`w-full p-4 text-base leading-relaxed bg-white/50 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 ${'text-amber-900'
+                  }`}
                 />
-                {errors.content && (
-                  <p className="text-red-600 text-sm mt-1 flex items-center">
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    {errors.content}
-                  </p>
-                )}
+                {errors.content && <p id="content-error" className="text-red-600 mt-1 text-sm">{errors.content}</p>}
               </div>
 
               {/* Additional Fields */}
@@ -332,8 +336,10 @@ const NewEntry: React.FC = () => {
                     value={entry.weather || ''}
                     onChange={(e) => setEntry(prev => ({ ...prev, weather: e.target.value }))}
                     placeholder="Güneşli, yağmurlu..."
-                    className="w-full px-3 py-2 bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200"
-                  />
+                    className={`w-full px-3 py-2 font-serif text-base leading-relaxed bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200 resize-none text-amber-900 ${
+                      errors.content ? 'border-red-400' : ''
+                    }`}
+                                      />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-amber-900 mb-2">
@@ -344,35 +350,39 @@ const NewEntry: React.FC = () => {
                     value={entry.location || ''}
                     onChange={(e) => setEntry(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="İstanbul, Ankara..."
-                    className="w-full px-3 py-2 bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200"
-                  />
+                    className={`w-full px-3 py-2 font-serif text-base leading-relaxed bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200 resize-none text-amber-900${
+                      errors.content ? 'border-red-400' : ''
+                    }`}
+                                      />
                 </div>
               </div>
 
               {/* Tags */}
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-amber-900 mb-2">
+              <div className="mb-6">
+                <label htmlFor="tags" className="block text-sm font-medium text-amber-900 mb-2">
                   <Tag className="inline w-4 h-4 mr-2" />
-                  Etiketler
+                  Etiketler (Enter'a basarak ekle)
                 </label>
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  placeholder="Etiket ekleyin (Enter'a basın)"
-                  className="w-full px-3 py-2 mb-3 bg-white/70 border border-amber-300 rounded-md focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all duration-200"
-                />
-                <div className="flex flex-wrap gap-2">
-                  {entry.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      onClick={() => removeTag(tag)}
-                      className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-amber-200 transition-colors duration-200"
-                    >
-                      {tag} ×
+                <div className="flex flex-wrap items-center gap-2 p-2 border rounded-lg bg-white/50">
+                  {entry.tags.map(tag => (
+                    <span key={tag} className="flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm">
+                      {tag}
+                      <button onClick={() => removeTag(tag)} aria-label={`'${tag}' etiketini kaldır`}>
+                        <X className="w-4 h-4" />
+                      </button>
                     </span>
                   ))}
+                  <input
+                    id="tags"
+                    type="text"
+                    value={tagInput}
+                    onChange={e => setTagInput(e.target.value)}
+                    onKeyDown={handleAddTag}
+                    placeholder="Yeni etiket..."
+                    className={`flex-1 p-1 bg-transparent focus:outline-none ${
+                      'text-amber-900'
+                    }`}
+                  />
                 </div>
               </div>
 
